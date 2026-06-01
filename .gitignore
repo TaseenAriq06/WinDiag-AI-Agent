@@ -1,0 +1,14 @@
+# Security
+.env
+
+# Virtual Environments
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Local Databases and Logs
+diagnostic.db
+agent_log.txt

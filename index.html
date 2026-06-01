@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Diagnostic Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; overflow-x: auto; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        
+        .alert-banner { background-color: #ef4444; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.4); font-size: 1.1em; animation: pulse 2s infinite; }
+        .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        
+        .spec-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; }
+        .spec-label { font-size: 0.85em; color: #6b7280; text-transform: uppercase; font-weight: bold; }
+        .spec-value { font-size: 1.1em; color: #1f2937; margin-top: 4px; }
+        
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; table-layout: auto; }
+        .log-table th, .log-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .log-table th { background-color: #f9fafb; color: #6b7280; text-transform: uppercase; font-weight: bold; user-select: none; }
+        .log-table th:hover { background-color: #f3f4f6; color: #111827; }
+        .clickable-row { cursor: pointer; transition: background-color 0.2s; }
+        .clickable-row:hover { background-color: #f3f4f6; }
+        .badge { background-color: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
+        
+        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px 0; }
+        .btn { background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .btn:hover:not(:disabled) { background-color: #1d4ed8; }
+        .btn:disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.7; }
+        .search-bar { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; transition: border-color 0.2s; }
+        .search-bar:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+        .table-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .filter-group { display: flex; gap: 10px; align-items: center; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; width: 90%; max-width: 600px; margin: 5vh auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; line-height: 1.6; overflow-y: auto; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #6b7280; }
+        .close-btn:hover { color: #111827; }
+
+        .kpi-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+        .kpi-card { flex: 1; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; text-align: center; }
+        .kpi-title { font-size: 0.8em; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .kpi-value { font-size: 1.8em; font-weight: bold; }
+        .kpi-unit { font-size: 0.5em; color: #6b7280; font-weight: normal; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.85; } 100% { opacity: 1; } }
+        
+        /* Tighten spacing inside the AI response block */
+        #aiResponseText p {
+            margin: 4px 0 8px 0;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        #aiResponseText h3 {
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        #aiResponseText ul, #aiResponseText ol {
+            margin-top: 2px;
+            margin-bottom: 8px;
+            padding-left: 18px;
+        }
+
+        #aiResponseText li {
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="logModal" class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="modalTitle" style="margin: 0;">Error Title</h3>
+                    <button class="close-btn" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-top: 0;"><strong>Event ID:</strong> <span id="modalEventId" class="badge"></span></p>
+                    <p><strong>Timestamp:</strong> <span id="modalTime"></span></p>
+                    <p><strong>Source Provider:</strong> <span id="modalProvider"></span></p>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <strong>Description:</strong><br>
+                        <span id="modalDescription"></span>
+                    </div>
+                    <div style="background: #eff6ff; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; margin-bottom: 15px;">
+                        <strong style="color: #1d4ed8;">Standard Recommended Action:</strong><br>
+                        <span id="modalAction"></span>
+                    </div>
+                    
+                    <div style="border-top: 1px dashed #d1d5db; padding-top: 15px;">
+                        <button id="aiBtn" class="btn" style="background-color: #8b5cf6; width: 100%; transition: 0.2s;" onclick="askGemini()">
+                            ✨ Analyze deeply with Gemini AI
+                        </button>
+                        
+                        <div id="aiResponseContainer" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 15px;">
+                            <strong style="color: #6d28d9;">Gemini AI Diagnostic Report:</strong>
+                            <div id="aiResponseText" style="font-size: 0.95em; line-height: 1.5; margin-top: 8px; white-space: pre-wrap; color: #1f2937;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="alertBanner" class="alert-banner" style="display: none;">
+            <span id="alertText"></span>
+        </div>
+
+        <div class="header">
+            <h1>PC Performance & Telemetry</h1>
+            <p>Live tracking data from local diagnostic agent database</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card sidebar">
+                <h3 style="margin-top: 0;">System Specs</h3>
+                <div class="spec-item"><div class="spec-label">Operating System</div><div class="spec-value" id="spec-os">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">Processor</div><div class="spec-value" id="spec-cpu" style="font-size: 0.9em;">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">Graphics Processor</div><div class="spec-value" id="spec-gpu" style="font-size: 0.9em;">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">Logical Cores</div><div class="spec-value" id="spec-cores" style="font-size: 0.9em;">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">Installed RAM</div><div class="spec-value" id="spec-ram">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">Primary Drive Storage</div><div class="spec-value" id="spec-disk" style="font-size: 0.9em;">Loading...</div></div>
+                <div class="spec-item"><div class="spec-label">System Uptime</div><div class="spec-value" id="spec-uptime">Loading...</div></div>
+            </div>
+
+            <div class="card main-content">
+                <h3 style="margin-top: 0;">CPU, GPU & Network Utilization</h3>
+                <div class="kpi-container">
+                    <div class="kpi-card"><div class="kpi-title">CPU Load</div><div class="kpi-value" style="color: #2563eb;"><span id="live-val-cpu">0</span><span class="kpi-unit">%</span></div></div>
+                    <div class="kpi-card"><div class="kpi-title">RAM Usage</div><div class="kpi-value" style="color: #10b981;"><span id="live-val-ram">0</span><span class="kpi-unit">%</span></div></div>
+                    <div class="kpi-card"><div class="kpi-title">GPU Engine</div><div class="kpi-value" style="color: #8b5cf6;"><span id="live-val-gpu">0</span><span class="kpi-unit">%</span></div></div>
+                    <div class="kpi-card"><div class="kpi-title">Network</div><div class="kpi-value" style="color: #f06e69;"><span id="live-val-net">0.00</span><span class="kpi-unit"> Mbps</span></div></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #374151; font-size: 0.9em; text-transform: uppercase;">Top Memory Consumers</h4>
+                        <div id="processList" style="display: grid; gap: 8px; font-size: 0.9em;">
+                            <div style="color: #6b7280;">Scanning active processes...</div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #374151; font-size: 0.9em; text-transform: uppercase;">Active Network Sockets</h4>
+                        <div id="networkList" style="display: grid; gap: 8px; font-size: 0.9em;">
+                            <div style="color: #6b7280;">Scanning TCP/IP connections...</div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="chart-container">
+                    <canvas id="telemetryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="table-header-row">
+                <h3 style="margin: 0;">System Event History (Last 30 Days)</h3>
+                <div class="filter-group">
+                    <button class="btn" style="background-color: #10b981; display: flex; align-items: center; gap: 5px;" onclick="exportToCSV()">
+                        📥 Export CSV
+                    </button>
+                    <select id="severityFilter" class="search-bar" style="width: auto; cursor: pointer;" onchange="filterLogs()">
+                        <option value="all">All Severities</option>
+                        <option value="high">Critical (High)</option>
+                        <option value="medium">Warning (Medium)</option>
+                        <option value="low">Info (Low)</option>
+                    </select>
+                    <input type="text" id="searchInput" class="search-bar" style="width: 250px;" onkeyup="filterLogs()" placeholder="🔍 Search logs, errors, or providers...">
+                </div>
+            </div>
+
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortLogs('timestamp')" style="cursor:pointer;">Timestamp ⇅</th>
+                        <th onclick="sortLogs('event_id')" style="cursor:pointer;">Event ID ⇅</th>
+                        <th onclick="sortLogs('title')" style="cursor:pointer;">Classification ⇅</th>
+                        <th onclick="sortLogs('provider')" style="cursor:pointer;">Provider ⇅</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: #6b7280;">Waiting for system logs...</td></tr>
+                </tbody>
+            </table>
+            
+            <div class="pagination">
+                <button id="prevBtn" class="btn" onclick="changePage(-1)">Previous</button>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: #6b7280; font-weight: bold;">
+                    <span>Page</span>
+                    <input type="number" id="pageInput" min="1" value="1" style="width: 60px; padding: 6px; text-align: center; border: 1px solid #d1d5db; border-radius: 6px; font-weight: bold;" onchange="goToPage()">
+                    <span id="pageIndicator">of 1</span>
+                </div>
+                <button id="nextBtn" class="btn" onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sortDirection = 1; 
+        let currentSortColumn = '';
+        let allErrors = [];
+        let filteredErrors = []; 
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let activeErrorForAI = null; // Track error for AI
+
+        function filterLogs() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const selectedSeverity = document.getElementById('severityFilter').value;
+            
+            filteredErrors = allErrors.filter(error => {
+                const textMatch = error.title.toLowerCase().includes(query) ||
+                                  error.provider.toLowerCase().includes(query) ||
+                                  error.event_id.toString().includes(query);
+                const severityMatch = (selectedSeverity === 'all') || (error.severity === selectedSeverity);
+                return textMatch && severityMatch;
+            });
+            
+            currentPage = 1; 
+            renderTable();
+        }
+
+        window.sortLogs = function(column) {
+            if (currentSortColumn === column) {
+                sortDirection *= -1;
+            } else {
+                sortDirection = 1;
+                currentSortColumn = column;
+            }
+            filteredErrors.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                if (column === 'event_id') return (valA - valB) * sortDirection;
+                return valA.toString().localeCompare(valB.toString()) * sortDirection;
+            });
+            currentPage = 1; 
+            renderTable();
+        };
+
+        // --- NEW: CSV Export Engine ---
+        window.exportToCSV = function() {
+            if (filteredErrors.length === 0) {
+                alert("No logs match your current filter. Nothing to export!");
+                return;
+            }
+
+            // 1. Define the spreadsheet headers
+            const headers = ["Timestamp", "Event ID", "Severity", "Classification", "Provider", "Description"];
+            
+            // 2. Loop through the currently filtered errors and format them
+            const csvRows = filteredErrors.map(err => {
+                const date = new Date(err.timestamp).toLocaleString('en-US');
+                
+                // Helper function: If a description has a comma in it, we MUST wrap it in quotes 
+                // so it doesn't break the CSV columns.
+                const escapeCSV = (str) => `"${String(str).replace(/"/g, '""')}"`;
+                
+                return [
+                    escapeCSV(date),
+                    err.event_id,
+                    escapeCSV(err.severity.toUpperCase()),
+                    escapeCSV(err.title),
+                    escapeCSV(err.provider),
+                    escapeCSV(err.description)
+                ].join(',');
+            });
+
+            // 3. Combine headers and rows with a line break (\n)
+            const csvContent = [headers.join(','), ...csvRows].join('\n');
+            
+            // 4. Create a "Blob" (A raw data file in the browser's memory)
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            // 5. Create a phantom HTML link, click it automatically, then destroy it
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            
+            // Name the file dynamically based on today's date
+            const today = new Date().toISOString().slice(0, 10);
+            link.setAttribute('download', `System_Diagnostic_Report_${today}.csv`);
+            
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        function getSeverityColors(severity) {
+            if (severity === 'high') {
+                return { bg: '#ef4444', text: '#ffffff', badgeBg: '#fee2e2', badgeText: '#b91c1c' }; 
+            } else if (severity === 'medium') {
+                return { bg: '#f97316', text: '#ffffff', badgeBg: '#ffedd5', badgeText: '#c2410c' }; 
+            } else {
+                return { bg: '#eab308', text: '#1f2937', badgeBg: '#fef9c3', badgeText: '#a16207' }; 
+            }
+        }
+
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        const telemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'CPU Usage (%)', data: [], borderColor: '#2563eb', tension: 0.2, fill: false, yAxisID: 'y' },
+                    { label: 'RAM Usage (%)', data: [], borderColor: '#10b981', tension: 0.2, fill: false, yAxisID: 'y' },
+                    { label: 'GPU Usage (%)', data: [], borderColor: '#8b5cf6', tension: 0.2, fill: false, yAxisID: 'y' },
+                    { label: 'Network Speed (Mbps)', data: [], borderColor: '#f06e69', tension: 0.2, fill: false, yAxisID: 'y1' }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                scales: { 
+                    y: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 100, title: { display: true, text: 'Utilization (%)', color: '#6b7280' } },
+                    y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, title: { display: true, text: 'Network (Mbps)', color: '#f06e69' }, grid: { drawOnChartArea: false } } 
+                }
+            }
+        });
+
+        async function fetchLiveTelemetry() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/live', { cache: 'no-store' });
+                const data = await response.json();
+                
+                document.getElementById('live-val-cpu').innerText = data.cpu.toFixed(1);
+                document.getElementById('live-val-ram').innerText = data.ram.toFixed(1);
+                document.getElementById('live-val-gpu').innerText = data.gpu.toFixed(1);
+                document.getElementById('live-val-net').innerText = data.wifi_mbps.toFixed(2);
+
+                // --- NEW: Update the Process List ---
+                const processBox = document.getElementById('processList');
+                processBox.innerHTML = ''; // Clear out the old list
+
+                data.top_processes.forEach(proc => {
+                    // Create a row for each process
+                    const row = `
+                        <div style="display: flex; justify-content: space-between; background: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            <strong style="color: #1f2937;">${proc.name}</strong>
+                            <span style="color: #6b7280;">
+                                <span style="color: #10b981; font-weight: bold;">${proc.ram}% RAM</span> | 
+                                <span style="color: #2563eb;">${proc.cpu}% CPU</span>
+                            </span>
+                        </div>
+                    `;
+                    processBox.innerHTML += row;
+                });
+
+                // --- NEW: Update the Active Network Connections List ---
+                const networkBox = document.getElementById('networkList');
+                networkBox.innerHTML = ''; // Clear old sockets
+
+                if (data.top_connections.length === 0) {
+                    networkBox.innerHTML = '<div style="color: #6b7280; padding: 8px;">No active connections found.</div>';
+                } else {
+                    data.top_connections.forEach(conn => {
+                        const row = `
+                            <div style="display: flex; justify-content: space-between; background: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                <strong style="color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${conn.process}">${conn.process}</strong>
+                                <span style="color: #6b7280;">
+                                    <span style="color: #f06e69; font-weight: bold;">${conn.ip}</span> : ${conn.port}
+                                </span>
+                            </div>
+                        `;
+                        networkBox.innerHTML += row;
+                    });
+                }
+
+                telemetryChart.data.labels.push(data.timestamp);
+                telemetryChart.data.datasets[0].data.push(data.cpu);
+                telemetryChart.data.datasets[1].data.push(data.ram);
+                telemetryChart.data.datasets[2].data.push(data.gpu);
+                telemetryChart.data.datasets[3].data.push(data.wifi_mbps);
+                
+                if (telemetryChart.data.labels.length > 20) {
+                    telemetryChart.data.labels.shift();
+                    telemetryChart.data.datasets[0].data.shift();
+                    telemetryChart.data.datasets[1].data.shift();
+                    telemetryChart.data.datasets[2].data.shift();
+                    telemetryChart.data.datasets[3].data.shift();
+                }
+                telemetryChart.update();
+            } catch (error) { console.error("Error fetching live data:", error); }
+        }
+
+        window.openModal = function(globalIndex) {
+            const error = filteredErrors[globalIndex];
+            if (!error) return;
+            
+            activeErrorForAI = error; 
+            
+            const aiBtn = document.getElementById('aiBtn');
+            const responseContainer = document.getElementById('aiResponseContainer');
+            const responseText = document.getElementById('aiResponseText');
+
+            // --- FIXED: Safely create a cache key from the event ID and PROVIDER ---
+            const safeProvider = String(error.provider).replace(/[^a-zA-Z0-9]/g, '_');
+            const cacheKey = `gemini_cache_${error.event_id}_${safeProvider}`;
+            const cachedAnalysis = localStorage.getItem(cacheKey);
+
+            if (cachedAnalysis) {
+                // If it's already cached, load it instantly! No clicking required.
+                responseContainer.style.display = 'block';
+                responseText.innerHTML = marked.parse(cachedAnalysis);
+                aiBtn.innerText = '✨ Analysis Loaded from Memory';
+                aiBtn.disabled = true; // Disable button since we already have the answer
+            } else {
+                // If not cached, reset the UI to let the user ask for it
+                responseContainer.style.display = 'none';
+                responseText.innerText = '';
+                aiBtn.disabled = false;
+                aiBtn.innerText = '✨ Analyze deeply with Gemini AI';
+            }
+
+            // Fill out the rest of the standard modal info
+            const rowDate = new Date(error.timestamp);
+            const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+            const colors = getSeverityColors(error.severity);
+
+            document.getElementById('modalTitle').innerText = error.title;
+            document.getElementById('modalEventId').innerText = error.event_id;
+            document.getElementById('modalEventId').style.backgroundColor = colors.badgeBg;
+            document.getElementById('modalEventId').style.color = colors.badgeText;
+            document.getElementById('modalTime').innerText = cleanRowTime;
+            document.getElementById('modalProvider').innerText = error.provider;
+            document.getElementById('modalDescription').innerText = error.description;
+            document.getElementById('modalAction').innerText = error.action;
+
+            document.getElementById('logModal').style.display = 'block';
+        }
+
+        window.closeModal = function(event) {
+            if (!event || event.target.className === 'modal-overlay') {
+                document.getElementById('logModal').style.display = 'none';
+            }
+        }
+
+        window.askGemini = async function() {
+            if (!activeErrorForAI) return;
+
+            const aiBtn = document.getElementById('aiBtn');
+            const responseContainer = document.getElementById('aiResponseContainer');
+            const responseText = document.getElementById('aiResponseText');
+
+            // --- FIXED: Generate the exact same entity key used in openModal using activeErrorForAI ---
+            const safeProvider = String(activeErrorForAI.provider).replace(/[^a-zA-Z0-9]/g, '_');
+            const cacheKey = `gemini_cache_${activeErrorForAI.event_id}_${safeProvider}`;
+
+            aiBtn.disabled = true;
+            aiBtn.innerText = '⚡ Consulting Kernel Experts (Loading)...';
+            responseContainer.style.display = 'block';
+            responseText.innerHTML = '<em>Analyzing logs and checking system components...</em>';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/analyze-error', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: activeErrorForAI.event_id,
+                        title: activeErrorForAI.title,
+                        provider: activeErrorForAI.provider,
+                        description: activeErrorForAI.description
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save to browser memory so it autoloads next time!
+                    localStorage.setItem(cacheKey, data.analysis);
+                    
+                    responseText.innerHTML = marked.parse(data.analysis);
+                    aiBtn.innerText = '✨ Analysis Complete';
+                } else {
+                    responseText.innerHTML = `<span style="color: red;">Error: ${data.detail || 'Failed to generate analysis.'}</span>`;
+                    aiBtn.disabled = false;
+                    aiBtn.innerText = '❌ Try Again';
+                }
+            } catch (error) {
+                console.error("AI API Error:", error);
+                responseText.innerHTML = '<span style="color: red;">Failed to connect to local server endpoint. Make sure the API is running.</span>';
+                aiBtn.disabled = false;
+                aiBtn.innerText = '❌ Try Again';
+            }
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('logTableBody');
+            tableBody.innerHTML = ''; 
+            
+            if (filteredErrors.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #6b7280;">No system logs match your filters.</td></tr>';
+                document.getElementById('pageIndicator').innerText = `of 1`;
+                document.getElementById('pageInput').value = 1;
+                document.getElementById('prevBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true;
+                return;
+            }
+            
+            const totalPages = Math.ceil(filteredErrors.length / rowsPerPage);
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const currentErrors = filteredErrors.slice(startIndex, endIndex);
+
+            currentErrors.forEach((error, index) => {
+                const globalIndex = startIndex + index; 
+                const rowDate = new Date(error.timestamp);
+                const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+                const rowColors = getSeverityColors(error.severity);
+                const row = `
+                    <tr class="clickable-row" onclick="openModal(${globalIndex})">
+                        <td style="white-space: nowrap;">${cleanRowTime}</td>
+                        <td><span class="badge" style="background-color: ${rowColors.badgeBg}; color: ${rowColors.badgeText};">${error.event_id}</span></td>
+                        <td><strong>${error.title}</strong></td>
+                        <td>${error.provider}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+            
+            document.getElementById('pageInput').value = currentPage;
+            document.getElementById('pageInput').max = totalPages;
+            document.getElementById('pageIndicator').innerText = `of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = (currentPage === 1);
+            document.getElementById('nextBtn').disabled = (currentPage === totalPages);
+        }
+
+        window.changePage = function(direction) {
+            currentPage += direction;
+            renderTable();
+        };
+
+        window.goToPage = function() {
+            const pageInput = document.getElementById('pageInput');
+            let targetPage = parseInt(pageInput.value);
+            const totalPages = Math.ceil(filteredErrors.length / rowsPerPage) || 1;
+            
+            if (isNaN(targetPage) || targetPage < 1) targetPage = 1;
+            else if (targetPage > totalPages) targetPage = totalPages;
+            
+            currentPage = targetPage;
+            renderTable();
+        };
+
+        async function checkSystemErrors() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/errors', { cache: 'no-store' });
+                const result = await response.json();
+                if (result.count > 0) {
+                    const latestError = result.errors[0];
+                    const alertBanner = document.getElementById('alertBanner');
+                    const alertText = document.getElementById('alertText');
+                    
+                    const bannerDate = new Date(latestError.timestamp);
+                    const cleanBannerTime = bannerDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+                    const colors = getSeverityColors(latestError.severity);
+                    
+                    alertBanner.style.backgroundColor = colors.bg;
+                    alertBanner.style.color = colors.text;
+
+                    const now = new Date();
+                    const hoursDifference = Math.abs(now - bannerDate) / 36e5; 
+
+                    if (hoursDifference < 24) {
+                        alertText.innerHTML = `
+                            <strong>⚠️ ${latestError.title}</strong><br>
+                            <em>${cleanBannerTime}</em><br><br>
+                            ${latestError.description}<br>
+                            <strong>Recommended Action:</strong> ${latestError.action}
+                        `;
+                        alertBanner.style.display = 'block';
+                    } else {
+                        alertBanner.style.display = 'none';
+                    }
+                    
+                    allErrors = result.errors;
+                    filterLogs(); 
+                } else {
+                    allErrors = [];
+                    filterLogs();
+                }
+            } catch (error) { console.error("Error fetching system errors API:", error); }
+        }
+        
+        let systemBootTime = 0
+
+        async function fetchSystemSpecs() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/system-specs');
+                const specs = await response.json();
+                document.getElementById('spec-os').innerText = specs.os;
+                document.getElementById('spec-cpu').innerText = specs.cpu;
+                document.getElementById('spec-gpu').innerText = specs.gpu;
+                document.getElementById('spec-cores').innerText = specs.cores;
+                document.getElementById('spec-ram').innerText = specs.ram;
+                document.getElementById('spec-disk').innerText = specs.disk;
+                
+                systemBootTime = specs.boot_time;
+            } catch (error) { console.error("Error fetching system specs:", error); }
+        }
+        
+        function updateUptime() {
+            if (systemBootTime === 0) return;
+            const now = Date.now() / 1000; 
+            const diff = now - systemBootTime; 
+            
+            const d = Math.floor(diff / (3600*24));
+            const h = Math.floor((diff % (3600*24)) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = Math.floor(diff % 60);
+            
+            document.getElementById('spec-uptime').innerText = `${d}d ${h}h ${m}m ${s}s`;
+        }
+        setInterval(updateUptime, 1000);
+
+        fetchSystemSpecs();
+        checkSystemErrors();
+        fetchLiveTelemetry(); 
+        
+        setInterval(fetchLiveTelemetry, 15000); 
+        setInterval(checkSystemErrors, 10000);
+    </script>
+</body>
+</html>
