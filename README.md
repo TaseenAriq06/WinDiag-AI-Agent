@@ -13,7 +13,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 <p align="center">
   <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/event-log.jpg" width="78%"/>
   &nbsp;
-  <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="48%"/>
+  <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="28%"/>
 </p>
 ---
 
