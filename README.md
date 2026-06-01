@@ -180,7 +180,6 @@ Open `.env` and set your key:
 GEMINI_API_KEY=your_google_gemini_api_key_here
 ```
 
-> ⚠️ Never commit your `.env` file. It is already listed in `.gitignore`.
 
 **2. Set the environment variable for your session**
 
