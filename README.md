@@ -8,9 +8,13 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 <!-- Replace the line below with a screenshot or GIF of your dashboard -->
 ### Live Hardware Telemetry & System Specs
-[Telemetry Dashboard] ![image alt](https://github.com/TaseenAriq06/WinDiag-AI-Agent/blob/564878460bec74a08288cc4e104c36493f94e1fc/assets/dashboard_telemetry.jpg)
-[Event-Logs] ![image_alt](https://github.com/TaseenAriq06/WinDiag-AI-Agent/blob/610875bc47b030139f23ba6a70686d5439864d32/assets/event-log.jpg)
-[AI-Summary] ![image alt](https://github.com/TaseenAriq06/WinDiag-AI-Agent/blob/610875bc47b030139f23ba6a70686d5439864d32/assets/ai-modal.jpg)
+<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/dashboard_telemetry.jpg" width="100%"/>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/event-log.jpg" width="48%"/>
+  &nbsp;
+  <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="48%"/>
+</p>
 ---
 
 ## Table of Contents
