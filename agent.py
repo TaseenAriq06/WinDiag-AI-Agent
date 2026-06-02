@@ -82,7 +82,7 @@ if result.stdout.strip():
         print(f"Source Provider: {provider}")
         print("-" * 40)
 
-        # this select statement provides results that we can iterate through
+        # this select statement makes sure that we don't insert duplicate system events into the database
         cursor.execute(
             "SELECT 1 FROM system_events WHERE event_id = ? AND timestamp = ?",
             (int(event_id), timestamp)

@@ -14,6 +14,8 @@ load_dotenv()
 
 app = FastAPI(title = "Diagnostic Agent API")
 
+# CORS tells the FastAPI server to tell the browser that it allows requests from anyone, so let the data through
+# since browsers have strict origin policies, they can block fetching data that aren't on the same domain
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,16 +23,17 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"]
 )
-
+# this try/except block reaches out to Google Servers to check for Gemini API key to set up a connection without crashing program
 try:
     client = genai.Client()
 except Exception as e:
     print(f"Warning: Gemini Client failed to initialize. Error {e}")
 
-# --- NEW: Global Variables for Wi-Fi Speed Calculation ---
+# save the total bytes sent/received at the exact moment the server starts, and the current time
 last_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
 last_net_time = time.time()
 
+# storing the error dictionary here to keep the database size strictly for event error logs, not descriptions
 ERROR_DICTIONARY = {
     41: {
         "title": "Kernel-Power Failure",
@@ -90,20 +93,26 @@ ERROR_DICTIONARY = {
 
 def fetch_data(query: str, params: tuple = (), limit: int = 100):
     """Connects to SQLite, runs a query, and formats the outputs cleanly."""
+    # connects to the database to fetch the telemetry data logs
     conn = sqlite3.connect('diagnostic.db')
+    # this is telling SQLite to return the data as a tuple with column names attached, converting the database row into Python dicts
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-
+    
+    # make sure the most recent data is on the top and a limit to make sure it doesn't load every single row to freeze the server
+    # adding params makes sure that the API builds custom queries, immune from SQL Injections
     cursor.execute(f"{query} ORDER BY timestamp DESC LIMIT {limit}", params)
     rows = cursor.fetchall()
     conn.close()
 
+    # it turns the rows from Python dictionaries into a JSON object that is easy for JavaScript to read and fetch data from
     return [dict(row) for row in rows]
 
 @app.get("/")
 def home():
     return {"message": "Diagnostic API Server is Online"}
 
+# this fetches a snapshot from the database and serves it to the dashboard (Select * retrieves all columns from database in query)
 @app.get("/api/telemetry")
 def get_telemetry():
     data = fetch_data("SELECT * FROM telemetry")
@@ -111,6 +120,7 @@ def get_telemetry():
 
 @app.get("/api/errors")
 def get_errors():
+    # this tells the query to search only from the past month, not lifetime error logs, keeps API fast and shows relevant logs
     sql_query = "SELECT * FROM system_events WHERE timestamp >= datetime('now', '-30 days')"
     raw_data = fetch_data(sql_query, limit=1000)
     translated_errors = []
@@ -118,12 +128,13 @@ def get_errors():
     for row in raw_data:
         event_id = row["event_id"]
 
+        # use event_id as a key to search the dictionary, and if it's not in the dict, return a unknown event with unknown description
         translation = ERROR_DICTIONARY.get(event_id, {
             "title": f"Unknown Event (ID: {event_id})",
             "description": "An undocumented critical system event was recorded.",
             "action": f"Investigate source provider: {row['provider']}"
         })
-
+        # creating a new dictionary for each error by combining raw data and metadata
         translated_errors.append({
             "event_id": event_id,
             "timestamp": row["timestamp"],
@@ -137,9 +148,11 @@ def get_errors():
 
 @app.get("/api/system-specs")
 def get_system_specs():
+    # platorm is native for Python, and tells basic information of a system spec compared to subprocess to command Windows directly
     os_info = f"{platform.system()} {platform.release()}"
 
     try: 
+        # commanding Windows directly in PowerShell asks the WMI database for your hardware's actual details of CPU
         cpu_cmd = 'powershell -Command "(Get-CimInstance Win32_Processor).Name"'
         cpu_output = subprocess.check_output(cpu_cmd, shell=True, text=True)
         cpu_info = cpu_output.strip()
@@ -151,12 +164,13 @@ def get_system_specs():
         gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True).strip()
         gpu_lines = [line.strip() for line in gpu_output.split('\n') if line.strip()]
         
-        # If your laptop has two GPUs, this specifically hunts for the NVIDIA one
+        # most devices have two GPUs like a integrated one and dedicated one, this searches for the performance GPU instead
         gpu_info = next((gpu for gpu in gpu_lines if "NVIDIA" in gpu.upper()), gpu_lines[0])
     except:
         gpu_info = "Unknown GPU"
     
     mem = psutil.virtual_memory()
+    # computer hardware reports memory in bytes, so converting 1024^3 is necessary to convert it into Gigabytes, to .1 decimal place
     used_ram = round(mem.used / (1024**3), 1)
     total_ram = round(mem.total / (1024 ** 3), 1)
 
@@ -166,6 +180,7 @@ def get_system_specs():
     total_disk_gb = round(disk.total / (1024**3), 1)
     free_disk_gb = round(disk.free / (1024**3), 1)
 
+    # cores are the physical silicon on your chip, threads is when each physical core acts like two virtual cores, showing hardware limits
     cores = psutil.cpu_count(logical=False)
     threads = psutil.cpu_count(logical=True)
 
@@ -191,6 +206,8 @@ def get_live_metrics():
     time_diff = current_time_now - last_net_time
 
     if time_diff > 0:
+        # take the difference in total bytes since the last time the function ran, * by 8 to convert bits to bytes, divide by 1 million
+        # to get megabits and divide by elapsed time to get current network speed, thats why global was used to remember until next call
         net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff
     else:
         net_mbps = 0.0
@@ -198,7 +215,9 @@ def get_live_metrics():
     last_net_time = current_time_now
 
     try:
+        # powershell command bypasses the limit of psutil library to talk directly to the Windows OS engine
         gpu_cmd = 'powershell -Command "((Get-Counter \'\\GPU Engine(*engtype_3D)\\Utilization Percentage\' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum).Sum"'
+        # if Windows takes too longs to report the GPU name, returns 0.0
         gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True, timeout=2).strip()
         gpu = round(float(gpu_output), 1) if gpu_output else 0.0
         if gpu > 100.0: gpu = 100.0
@@ -207,12 +226,13 @@ def get_live_metrics():
 
     processes = []
 
+    # this asks the OS for a list of every running process
     for proc in psutil.process_iter(['name', 'memory_percent', 'cpu_percent']):
         try:
             processes.append(proc.info)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
-
+    # only interested in the top 5 processes that are using the most RAM and discard the rest, keeps JSON small and dashboard clean
     top_procs = sorted(processes, key=lambda p: p['memory_percent'] or 0, reverse=True)[:5]
 
     clean_procs = []
@@ -225,23 +245,27 @@ def get_live_metrics():
 
     top_conns = []
     try:
+        # this pulls every single network connection that the device has 
         connections = psutil.net_connections(kind='inet')
+        # you only want connections that are talking to another server right now and ones with remote addresses
         established = [c for c in connections if c.status == 'ESTABLISHED' and c.raddr]
 
         for conn in established[:5]:
             proc_name = "System/Unknown"
             if conn.pid:
                 try:
+                    # network connection only knows the Process ID, and tries to see who owns the PID
                     proc_name = psutil.Process(conn.pid).name()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
-            
+            # creates a dictionary containing Proecss Name, Remote IP where the data is going, and the Port the data is using
             top_conns.append({
                 "process": proc_name,
                 "ip": conn.raddr.ip,
                 "port": conn.raddr.port
             })
     except psutil.AccessDenied:
+        # this makes sure that the API returns a friendly message instead of crashing since it might need Admin to get network connection data
         top_conns = [{"process": "Requires Admin", "ip": "Hidden", "port": "0"}]
     except Exception as e:
         top_conns = []
@@ -256,6 +280,7 @@ def get_live_metrics():
         "top_connections": top_conns
     }
 
+# when the frontend sends a request, FastAPI automatically checks incoming JSON, this protects Gemini API from receiving junk data
 class ErrorAnalysisReport(BaseModel):
     event_id: int
     title: str
@@ -265,8 +290,10 @@ class ErrorAnalysisReport(BaseModel):
 @app.post("/api/analyze-error")
 def analyze_error(request: ErrorAnalysisReport):
     if not os.environ.get("GEMINI_API_KEY"):
+        # this makes sure that the API key lives on the server, if it's missing, the endpoint returns a 500 error to the server
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY environment variable is missing on the server.")
     
+    # this is context injection, definining a markdown structure of a root cause and action plan for the AI to return the data as a report
     prompt = f"""
         You are an expert Windows OS Kernel Engineer. Analyze the provided Windows Event Log.
         
@@ -289,10 +316,12 @@ def analyze_error(request: ErrorAnalysisReport):
     """
 
     try:
+        # the server sends the prompt to gemini cloud, the client handles the network heavy lifting
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt
         )
+        # when the AI is done thinking, it returns a string and wrap it as a Python dict for JSON to read cleanly
         return {"analysis": response.text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}" )
