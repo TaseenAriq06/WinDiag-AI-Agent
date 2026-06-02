@@ -1,4 +1,4 @@
-# WinDiag AI Agent
+# WinDiag AI Agent (Currently In Development)
 
 A locally-hosted, AI-powered Windows system telemetry and diagnostic platform built with Python, FastAPI, and Vanilla JS. WinDiag runs silently in the background on every boot, collects hardware metrics and Windows Event Log data, and serves everything through a REST API to a live dashboard — with Google Gemini AI generating plain-language root cause analysis for kernel failures and system crashes.
 
@@ -8,7 +8,12 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 <!-- Replace the line below with a screenshot or GIF of your dashboard -->
 ### Live Hardware Telemetry & System Specs
-![Telemetry Dashboard] [https://github.com/TaseenAriq06/WinDiag-AI-Agent/blob/620a94c654f5e8ec5aff83929780a8e2314815ea/assets/ai-modal.webp](https://github.com/TaseenAriq06/WinDiag-AI-Agent/blob/main/assets/dashboard_telemetry.webp?raw=true)
+<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/dashboard_telemetry.jpg" width="100%"/>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/event-log.jpg" width="100%"/>
+  &nbsp; 
+</p>
 ---
 
 ## Table of Contents
@@ -39,7 +44,9 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 - **CSV Export** — Export the currently filtered event log to a timestamped `.csv` file for offline review or incident reporting
 - **Live Uptime Counter** — System uptime displayed as a live `Xd Xh Xm Xs` counter that ticks every second
 - **Silent Background Agent** — Runs on Windows startup without a terminal window using a VBScript launcher and Windows Task Scheduler
-
+<p align="center">
+<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="48%"/>
+  </p>
 ---
 
 ## Architecture
