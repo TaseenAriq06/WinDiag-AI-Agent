@@ -464,9 +464,13 @@
             responseText.innerHTML = '<em>Analyzing logs and checking system components...</em>';
 
             try {
+            // fetch is a built in browser tool that opens a connection to a URL, pauses and waits for next instruction 'await'
                 const response = await fetch('http://127.0.0.1:8000/api/analyze-error', {
+                    // a POST request is sending data to a server not asking for it 
                     method: 'POST',
+                    // sending JSON data to know how to decode it
                     headers: { 'Content-Type': 'application/json' },
+                    // JSON.stringify turns raw JavaScript objects into readable text for the network to carry
                     body: JSON.stringify({
                         event_id: activeErrorForAI.event_id,
                         title: activeErrorForAI.title,
@@ -474,21 +478,21 @@
                         description: activeErrorForAI.description
                     })
                 });
-
+                // tells the browser to convert the readable text into JavaScript objects to read properties inside it
                 const data = await response.json();
                 
-                if (response.ok) {
-                    // Save to browser memory so it autoloads next time!
+                if (response.ok) { // server returned a status code between 200-299 to show it was successful
+                    // saves browser memory into storage so it doesn't use Gemini API again for the same error code
                     localStorage.setItem(cacheKey, data.analysis);
-                    
+                    // converts the Gemini answer into markdown text to display nicely
                     responseText.innerHTML = marked.parse(data.analysis);
                     aiBtn.innerText = '✨ Analysis Complete';
-                } else {
+                } else { // server hit a error status code like 404 or 500
                     responseText.innerHTML = `<span style="color: red;">Error: ${data.detail || 'Failed to generate analysis.'}</span>`;
                     aiBtn.disabled = false;
                     aiBtn.innerText = '❌ Try Again';
                 }
-            } catch (error) {
+            } catch (error) { // this is incase the request never reached the server 
                 console.error("AI API Error:", error);
                 responseText.innerHTML = '<span style="color: red;">Failed to connect to local server endpoint. Make sure the API is running.</span>';
                 aiBtn.disabled = false;
