@@ -375,7 +375,7 @@ def get_health_summary():
     cursor.execute("""
         SELECT COUNT(*) as recent_errors
         FROM system_events
-        WHERE timestamp >= datetime('now', '-1 day)               
+        WHERE timestamp >= datetime('now', '-1 day')             
     """)
     recent_errors = cursor.fetchone()['recent_errors']
 
@@ -385,7 +385,7 @@ def get_health_summary():
     return {
         "avg_cpu": round(stats["avg_cpu"] or 0, 1),
         "peak_cpu": round(stats["peak_cpu"] or 0, 1),
-        "avg_ram": round(stats["avg_ram" or 0, 1]),
+        "avg_ram": round(stats["avg_ram"] or 0, 1),
         "peak_ram": round(stats["peak_ram"] or 0, 1),
         "high_cpu_seconds": high_cpu_time,
         "critical_events_24h": recent_errors
