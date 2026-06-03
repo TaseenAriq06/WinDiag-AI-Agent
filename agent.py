@@ -114,6 +114,8 @@ def telemetry_loop():
         try:
             conn = sqlite3.connect('diagnostic.db')
             cursor = conn.cursor()
+            # it measures the cpu percentage used by the system over a 1 second interval 
+            # which gives us a real-time snapshot of how much processing power is being utilized
             cpu_usage = psutil.cpu_percent(interval=1)
             mem = psutil.virtual_memory()
             battery = psutil.sensors_battery()
@@ -126,17 +128,20 @@ def telemetry_loop():
             )
             conn.commit()
 
+            # a continuous printout of the system's CPU and RAM usage every second so we can see the telemetry log into the database 
             print(f"[Thread-1] 📊 Telemetry Logged: CPU {cpu_usage}% | RAM {mem.percent}%")
             
         except Exception as e:
             print(f"[Thread-1] Error in telemetry: {e}")
         finally:
             if conn: conn.close()
-
+# the moment the script runs, it starts a separate thread that runs the event_log_scrapper function in the background
+# while the main thread runs the telemetry_loop function, allowing both to operate simultaneously without blocking each other
 if __name__ == "__main__":
     setup_database()
 
-    scraper_thread = threading.Thread(target=event_log_scrapper, daemon=True)
+    # daemon thread means it will automatically close when the main program exits
+    scraper_thread = threading.Thread(target=event_log_scrapper, daemon=True) 
     scraper_thread.start()
 
     try:
