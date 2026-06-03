@@ -5,7 +5,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 import sqlite3
 
-# creates a file diagnostic.db in the same directory as the script and makes a 'diagnostic.db' file
+# creates a file diagnostic.db in the same directory as the script
 conn = sqlite3.connect('diagnostic.db')
 # be able to use sql commands by making a cursor
 cursor = conn.cursor()
