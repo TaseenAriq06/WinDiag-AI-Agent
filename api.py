@@ -118,6 +118,25 @@ def get_telemetry():
     data = fetch_data("SELECT * FROM telemetry")
     return {"count": len(data), "telemetry": data}
 
+@app.get("/api/history")
+def get_telemetry_history():
+    # grabs the last 20 rows from the database so the live chart loads with previous logs immediately
+    data = fetch_data("SELECT timestamp, cpu_percent, ram_percent, power_plugged FROM telemetry", limit=20)
+    data.reverse() # the oldest log of the 20 is the first one to show in the chart
+    return {"count": len(data), "telemetry": data}
+
+@app.get("/api/live/fast")
+def get_live_fast():
+    # reads only from psutil and returns this data instantly for the KPI numbers
+    cpu = psutil.cpu_percent(interval=0.1)
+    mem = psutil.virtual_memory().percent
+
+    return {
+        "timestamp": time.strftime("%H:%M:%S"),
+        "cpu": cpu,
+        "mem": mem
+    }
+
 @app.get("/api/errors")
 def get_errors():
     # this tells the query to search only from the past month, not lifetime error logs, keeps API fast and shows relevant logs

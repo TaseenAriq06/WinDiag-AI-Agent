@@ -329,6 +329,32 @@
                 }
             }
         });
+        
+        async function loadChartHistory() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/history');
+                const result = await response.json();
+                result.telemetry.forEach(row => {
+                    const timeLabel = row.timestamp.slice(-8);
+                    telemetryChart.data.labels.push(timeLabel);
+                    telemetryChart.data.datasets[0].data.push(row.cpu_percent);
+                    telemetryChart.data.datasets[1].data.push(row.ram_percent);
+                    telemetryChart.data.datasets[2].data.push(0); // GPU not in telemetry table yet
+                    telemetryChart.data.datasets[3].data.push(0); // network not in telemetry table yet
+                });
+                telemetryChart.update();
+            } catch (e) { console.error("Failed to load chart history", e); }
+        }
+
+        async function fetchLiveFast() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/live/fast', { cache: 'no-store' });
+                const data = await response.json();
+                // update the KPI tiles only, not the chart
+                document.getElementById('live-val-cpu').innerText = data.cpu.toFixed(1);
+                document.getElementById('live-val-ram').innerText = data.ram.toFixed(1);
+            } catch(e) {}
+        }
 
         async function fetchLiveTelemetry() {
             try {
@@ -632,10 +658,12 @@
         }
         setInterval(updateUptime, 1000);
 
+        loadChartHistory();
         fetchSystemSpecs();
         checkSystemErrors();
         fetchLiveTelemetry(); 
         
+        setInterval(fetchLiveFast, 2000)
         setInterval(fetchLiveTelemetry, 15000); 
         setInterval(checkSystemErrors, 10000);
     </script>
