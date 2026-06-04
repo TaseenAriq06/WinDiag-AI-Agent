@@ -133,6 +133,14 @@
                 <div class="spec-item"><div class="spec-label">Installed RAM</div><div class="spec-value" id="spec-ram">Loading...</div></div>
                 <div class="spec-item"><div class="spec-label">Primary Drive Storage</div><div class="spec-value" id="spec-disk" style="font-size: 1.1em;">Loading...</div></div>
                 <div class="spec-item"><div class="spec-label">System Uptime</div><div class="spec-value" id="spec-uptime">Loading...</div></div>
+
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
+                    <button class="btn" style="width: 100%; background-color: #0ea5e9; margin-bottom: 10px;" onclick="fetchHealthSummary()">
+                        GENERATE 24 HOUR HEALTH SUMMARY REPORT
+                    </button>
+                    <div id="healthSummaryBox" style="display: none; font-size: 0.95em; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    </div>
+                </div>
             </div>
 
             <div class="card main-content">
@@ -329,6 +337,43 @@
                 }
             }
         });
+
+        async function fetchHealthSummary(){
+            const summaryBox = document.getElementById('healthSummaryBox')
+
+            summaryBox.style.display = 'block';
+            summaryBox.innerHTML = '<span style="color: #6b7280; font-style: italic;">Analyzing 24-hour telemetry vault...</span>';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/health-summary', { cache: 'no-store' });
+                const data = await response.json()
+
+                summaryBox.innerHTML = `
+                    <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Avg CPU %:</span> <strong>${data.avg_cpu}%</strong>
+                    </div>
+                    <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Peak CPU %:</span> <strong style="color: ${data.peak_cpu > 80 ? '#ef4444' : '#1f2937'};">${data.peak_cpu}%</strong>
+                    </div>
+                    <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Avg RAM %:</span> <strong>${data.avg_ram}%</strong>
+                    </div>
+                    <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Peak RAM %:</span> <strong>${data.peak_ram}%</strong>
+                    </div>
+                    <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Time >80% CPU:</span> <strong>${data.high_cpu_seconds} sec</strong>
+                    </div>
+                    <div style="padding-top: 8px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">Critical Errors:</span> 
+                        <strong style="color: ${data.critical_events_24h > 0 ? '#ef4444' : '#10b981'};">${data.critical_events_24h}</strong>
+                    </div>
+                `;
+            } catch (error) {
+                console.error("Error fetching health summary: ", error)
+                summaryBox.innerHTML = '<span style="color: red;">Failed to load report from server.</span>';
+            }
+        }
         
         async function loadChartHistory() {
             try {
