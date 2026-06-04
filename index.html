@@ -225,7 +225,7 @@
         const rowsPerPage = 10;
         let activeErrorForAI = null; // Track error for AI
 
-        function filterLogs() {
+        function filterLogs(resetPage = true) {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const selectedSeverity = document.getElementById('severityFilter').value;
             
@@ -237,7 +237,9 @@
                 return textMatch && severityMatch;
             });
             
-            currentPage = 1; 
+            if(resetPage == true){
+                currentPage = 1;
+            }
             renderTable();
         }
 
@@ -664,10 +666,10 @@
                     }
                     
                     allErrors = result.errors;
-                    filterLogs(); 
+                    filterLogs(false); 
                 } else {
                     allErrors = [];
-                    filterLogs();
+                    filterLogs(false);
                 }
             } catch (error) { console.error("Error fetching system errors API:", error); }
         }
