@@ -347,39 +347,42 @@ def analyze_error(request: ErrorAnalysisReport):
 
 @app.get("/api/health-summary")
 def get_health_summary():
-    conn = sqlite3.connect('diagnostic.db')
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # get the averages of CPU and RAM from the last 24 hours
-    cursor.execute("""
-        SELECT
-            AVG(cpu_percent) as avg_cpu,
-            MAX(cpu_percent) as peak_cpu,
-            AVG(ram_percent) as avg_ram,
-            MAX(ram_percent) as peak_ram
-        FROM telemetry
-        WHERE timestamp >= datetime('now', '-1 day')
-    """)
-    stats = dict(cursor.fetchone())
+    conn = None
     
-    # count how many secs the CPU was over 80% in the last 24 hours
-    cursor.execute("""
-        SELECT COUNT(*) as high_cpu_time
-        FROM telemetry
-        WHERE cpu_percent >= 80.0 AND timestamp >= datetime('now', '-1 day')
-    """)
-    high_cpu_time = cursor.fetchone()["high_cpu_time"]
+    try:
+        conn = sqlite3.connect('diagnostic.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-    # check with system-events table to see if anything crashed today
-    cursor.execute("""
-        SELECT COUNT(*) as recent_errors
-        FROM system_events
-        WHERE timestamp >= datetime('now', '-1 day')             
-    """)
-    recent_errors = cursor.fetchone()['recent_errors']
+        # get the averages of CPU and RAM from the last 24 hours
+        cursor.execute("""
+            SELECT
+                AVG(cpu_percent) as avg_cpu,
+                MAX(cpu_percent) as peak_cpu,
+                AVG(ram_percent) as avg_ram,
+                MAX(ram_percent) as peak_ram
+            FROM telemetry
+            WHERE timestamp >= datetime('now', '-1 day')
+        """)
+        stats = dict(cursor.fetchone())
+        
+        # count how many secs the CPU was over 80% in the last 24 hours
+        cursor.execute("""
+            SELECT COUNT(*) as high_cpu_time
+            FROM telemetry
+            WHERE cpu_percent >= 80.0 AND timestamp >= datetime('now', '-1 day')
+        """)
+        high_cpu_time = cursor.fetchone()["high_cpu_time"]
 
-    conn.close()
+        # check with system-events table to see if anything crashed today
+        cursor.execute("""
+            SELECT COUNT(*) as recent_errors
+            FROM system_events
+            WHERE timestamp >= datetime('now', '-1 day')             
+        """)
+        recent_errors = cursor.fetchone()["recent_errors"]
+    finally:
+        if conn: conn.close()
 
     # if the database is new and empty, prevent Python from crashing over no values
     return {
