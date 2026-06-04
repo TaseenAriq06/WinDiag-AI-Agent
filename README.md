@@ -45,7 +45,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 - **Live Uptime Counter** — System uptime displayed as a live `Xd Xh Xm Xs` counter that ticks every second
 - **Silent Background Agent** — Runs on Windows startup without a terminal window using a VBScript launcher and Windows Task Scheduler
 <p align="center">
-<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="48%"/>
+<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal.jpg" width="43%"/>
   <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/ai-modal-2.jpg" width="48%"/>
   </p>
 ---
