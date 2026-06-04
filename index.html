@@ -101,12 +101,12 @@
                     </div>
                     
                     <div style="border-top: 1px dashed #d1d5db; padding-top: 15px;">
-                        <button id="aiBtn" class="btn" style="background-color: #8b5cf6; width: 100%; transition: 0.2s;" onclick="askGemini()">
-                            Analyze deeply with Gemini AI
+                        <button id="aiBtn" class="btn" style="background-color: #9177C7; width: 100%; transition: 0.2s;" onclick="askGemini()">
+                            Ask AI For Recommendation
                         </button>
                         
                         <div id="aiResponseContainer" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 15px;">
-                            <strong style="color: #6d28d9;">Gemini AI Diagnostic Report:</strong>
+                            <strong style="color: #9177C7;">Gemini AI Diagnostic Report:</strong>
                             <div id="aiResponseText" style="font-size: 0.95em; line-height: 1.5; margin-top: 8px; white-space: pre-wrap; color: #1f2937;"></div>
                         </div>
                     </div>
@@ -169,7 +169,7 @@
             <div class="table-header-row">
                 <h3 style="margin: 0;">System Event History (Last 30 Days)</h3>
                 <div class="filter-group">
-                    <button class="btn" style="background-color: #10b981; display: flex; align-items: center; gap: 5px;" onclick="exportToCSV()">
+                    <button class="btn" style="background-color: #46ac64; display: flex; align-items: center; gap: 5px;" onclick="exportToCSV()">
                         📥 Export CSV
                     </button>
                     <select id="severityFilter" class="search-bar" style="width: auto; cursor: pointer;" onchange="filterLogs()">
@@ -440,14 +440,14 @@
                 // If it's already cached, load it instantly! No clicking required.
                 responseContainer.style.display = 'block';
                 responseText.innerHTML = marked.parse(cachedAnalysis);
-                aiBtn.innerText = '✨ Analysis Loaded from Memory';
+                aiBtn.innerText = 'Analysis Loaded from Memory';
                 aiBtn.disabled = true; // Disable button since we already have the answer
             } else {
                 // If not cached, reset the UI to let the user ask for it
                 responseContainer.style.display = 'none';
                 responseText.innerText = '';
                 aiBtn.disabled = false;
-                aiBtn.innerText = '✨ Analyze deeply with Gemini AI';
+                aiBtn.innerText = 'Ask AI For Recommendation';
             }
 
             // Fill out the rest of the standard modal info
@@ -485,7 +485,7 @@
             const cacheKey = `gemini_cache_${activeErrorForAI.event_id}_${safeProvider}`;
 
             aiBtn.disabled = true;
-            aiBtn.innerText = '⚡ Consulting Kernel Experts (Loading)...';
+            aiBtn.innerText = 'Consulting Kernel Experts (Loading)...';
             responseContainer.style.display = 'block';
             responseText.innerHTML = '<em>Analyzing logs and checking system components...</em>';
 
@@ -512,7 +512,7 @@
                     localStorage.setItem(cacheKey, data.analysis);
                     // converts the Gemini answer into markdown text to display nicely
                     responseText.innerHTML = marked.parse(data.analysis);
-                    aiBtn.innerText = '✨ Analysis Complete';
+                    aiBtn.innerText = 'Analysis Complete';
                 } else { // server hit a error status code like 404 or 500
                     responseText.innerHTML = `<span style="color: red;">Error: ${data.detail || 'Failed to generate analysis.'}</span>`;
                     aiBtn.disabled = false;
