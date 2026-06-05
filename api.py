@@ -33,64 +33,6 @@ except Exception as e:
 last_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
 last_net_time = time.time()
 
-# storing the error dictionary here to keep the database size strictly for event error logs, not descriptions
-ERROR_DICTIONARY = {
-    41: {
-        "title": "Kernel-Power Failure",
-        "description": "The system rebooted without cleanly shutting down first.",
-        "action": "Check for thermal throttling, sudden power loss, or a failing power supply.",
-        "severity": "high"
-    },
-    1001: {
-        "title": "BugCheck (Blue Screen)",
-        "description": "Windows encountered a fatal system error and dumped memory.",
-        "action": "Check for recently installed driver updates or faulty RAM.",
-        "severity": "high"
-    },
-    18: {
-        "title": "WHEA-Logger Hardware Error",
-        "description": "Windows cannot store Bluetooth authentication codes on the local adapter.",
-        "action": "Run memory diagnostics and check CPU/GPU temperatures.",
-        "severity": "medium"
-    },
-    4101: {
-        "title": "Display Driver Crash",
-        "description": "The graphics driver stopped responding and has successfully recovered.",
-        "action": "Update GPU drivers and check for overclocking instability.",
-        "severity": "medium"
-    },
-    88: {
-        "title": "Thermal Throttling",
-        "description": "The system detected an overheat condition and heavily reduced performance.",
-        "action": "Clean laptop fans, ensure proper airflow, and check ambient room temperature.",
-        "severity": "high"
-    },
-    10317: {
-        "title": "Network Adapter (NDIS) Error",
-        "description": "The Wi-Fi or Ethernet driver detected an internal error or failed a power transition.",
-        "action": "Update network drivers or disable 'Allow the computer to turn off this device to save power'.",
-        "severity": "low"
-    },
-    10010: {
-        "title": "DCOM Server Timeout",
-        "description": "A background Windows component failed to register in the required timeframe.",
-        "action": "Usually harmless. If frequent, verify Windows system integrity using 'sfc /scannow'.",
-        "severity": "low"
-    },
-    7011: {
-        "title": "Service Control Manager Timeout",
-        "description": "A Windows background service took too long to respond to a system request.",
-        "action": "Check the specific provider name. You may need to reinstall the freezing application.",
-        "severity": "medium"
-    },
-    6005: {
-        "title": "System Startup",
-        "description": "The Windows Event Log service was started, indicating a system boot.",
-        "action": "Routine informational event. No action required.",
-        "severity": "low"
-    }
-}
-
 def fetch_data(query: str, params: tuple = (), limit: int = 100):
     """Connects to SQLite, runs a query, and formats the outputs cleanly."""
     # connects to the database to fetch the telemetry data logs
@@ -147,21 +89,15 @@ def get_errors():
     for row in raw_data:
         event_id = row["event_id"]
 
-        # use event_id as a key to search the dictionary, and if it's not in the dict, return a unknown event with unknown description
-        translation = ERROR_DICTIONARY.get(event_id, {
-            "title": f"Unknown Event (ID: {event_id})",
-            "description": "An undocumented critical system event was recorded.",
-            "action": f"Investigate source provider: {row['provider']}"
-        })
         # creating a new dictionary for each error by combining raw data and metadata
         translated_errors.append({
-            "event_id": event_id,
+            "event_id": row["event_id"],
             "timestamp": row["timestamp"],
             "provider": row["provider"],
-            "title": translation["title"],
-            "description": translation["description"],
-            "action": translation["action"],
-            "severity": translation.get("severity", "low")
+            "title": f"System Event {row['event_id']}",
+            "description": row["description"],
+            "action": "Select 'Analyze with Gemini AI' for a full breakdown",
+            "severity": "high" if row ["event_id"] in [41, 1001] else "medium" 
         })
     return {"count": len(translated_errors), "errors": translated_errors}
 

@@ -6,7 +6,8 @@ import xml.etree.ElementTree as ET
 import sqlite3
 import threading
 import time
-import re
+import csv
+import io
 
 def setup_database():
     try:
@@ -32,7 +33,8 @@ def setup_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_id INTEGER,
             timestamp TEXT,
-            provider TEXT
+            provider TEXT,
+            description TEXT
         )
         """)
         # commits current transaction to the database so it can save to a file and not stay in your RAM
@@ -47,42 +49,34 @@ def event_log_scrapper():
             print("\n[Thread-2] --- Fetching Critical Errors ---")
             conn = sqlite3.connect('diagnostic.db')
             cursor = conn.cursor()
-
-            EVENT_IDS = [41, 1001, 18, 4101, 88, 10317, 10010, 7011, 6005]
-            # convert the list of event ids into a single string that Windows understands and can run like EventID=41 or EventID=1001...
-            id_string = " or ".join([f"EventID={eid}" for eid in EVENT_IDS])
-            critical_query_cmd = f"""wevtutil qe System "/q:*[System[({id_string})]]" /c:20000 /f:xml /rd:true"""
+            
+            # Level 1 and Level 2 are the Critical/Warning error logs that exist in Event Viewer, so we ask CMD to find them
+            ps_cmd = """powershell -Command "Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2} -MaxEvents 1000 -ErrorAction SilentlyContinue | Select-Object Id, @{N='TimeCreated';E={$_.TimeCreated.ToString('s')}}, ProviderName, Message | ConvertTo-Csv -NoTypeInformation" """
 
             # Python builds the command string, Windows executes the command, sends the XML back to Python as result.stdout, Python parses XML
             result = subprocess.run(
-                critical_query_cmd,
-                shell=True, # tells Python to open a real Windows CMD to run the command
+                ps_cmd,
+                shell=True, # tells Python to open a PowerShell to run the command
                 text=True,  # tells Python to treat the command as readable text
                 capture_output=True # grabs the data and saves it into a result variable for the script to read it internally
             )
             # wraps the raw data from the OS and normalizes it into a format thats easy to read in one XML file
             if result.stdout.strip():
-                wrapped_xml = f"<AllEvents>{result.stdout}</AllEvents>"
-                root = ET.fromstring(wrapped_xml)
-                # Microsoft uses this web link as a folder name for all system event tags and maintain organization
-                dynamic_url = "http://schemas.microsoft.com/win/2004/08/events/event"
+                csv_reader = csv.reader(io.StringIO(result.stdout.strip()))
+                next(csv_reader, None)
 
-                # if we capture at least one event, inspect it 
-                if len(root) > 0:
-                    first_tag = root[0].tag # this looks like "{http://...}Event"
-                    # extract exactly what is inside the { } braces
-                    match = re.search(r'\{(.*?)\}', first_tag)
-                    if match:
-                        dynamic_url = match.group(1)
-                # insert the discovered url into a dictionary under a nameSpace variable
-                nameSpace = {'win' : dynamic_url}
+                for row in csv_reader:
+                    if len(row) > 4:
+                        continue
+                    event_id = row[0]
+                    timestamp = row[1]
+                    provider = row[2]
+                    description = row[3]
 
-                # findall gets you a list of every <Event> block found in the XML file
-                for event in root.findall('win:Event', nameSpace):
-                    # tells Python to go through the folder structures for each <Event> to pull out the exact XML value
-                    event_id = event.find('win:System/win:EventID', nameSpace).text
-                    provider = event.find('win:System/win:Provider', nameSpace).get('Name')
-                    timestamp = event.find('win:System/win:TimeCreated', nameSpace).get('SystemTime')
+                    IGNORED_IDS = ['10016', '1108', '1014', '10010']
+                    
+                    if event_id in IGNORED_IDS:
+                        continue
 
                     # this select statement makes sure that we don't insert duplicate system events into the database
                     cursor.execute(
@@ -92,15 +86,15 @@ def event_log_scrapper():
                     # check if the record exists before inserting another system_event log, prevents duplicate bloating in database (Idempotency)
                     if cursor.fetchone() is None:
                         cursor.execute(
-                        "INSERT INTO system_events (event_id, timestamp, provider) VALUES (?, ?, ?)",
-                        (int(event_id), timestamp, provider)
+                        "INSERT INTO system_events (event_id, timestamp, provider, description) VALUES (?, ?, ?, ?)",
+                        (int(event_id), timestamp, provider, description)
                     )
                 conn.commit()
                 print("[Thread-2] Event Logs Updated")
             else:
                 print("[Thread-2] No critical errors found")
         except Exception as e:
-            print(f"[Thread-2] Error in scrapper {e}")
+            print(f"[Thread-2] Error in scrapper: {e}")
         finally:
             if conn: conn.close()
         # pause this thread just so it doesn't spam Windows
