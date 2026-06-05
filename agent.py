@@ -2,7 +2,7 @@
 # xml import is able to parse messy info from an XML file, sqlite3 is the local database engine storing data
 import psutil
 import subprocess
-import xml.etree.ElementTree as ET
+#import xml.etree.ElementTree as ET
 import sqlite3
 import threading
 import time
@@ -50,10 +50,10 @@ def event_log_scrapper():
             conn = sqlite3.connect('diagnostic.db')
             cursor = conn.cursor()
             
-            # Level 1 and Level 2 are the Critical/Warning error logs that exist in Event Viewer, so we ask CMD to find them
+            # this powershell command uses a filter to retrieve level 1 & 2 errors limits, and formats the output as CSV for easy parsing in Python
             ps_cmd = """powershell -Command "Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2} -MaxEvents 1000 -ErrorAction SilentlyContinue | Select-Object Id, @{N='TimeCreated';E={$_.TimeCreated.ToString('s')}}, ProviderName, Message | ConvertTo-Csv -NoTypeInformation" """
 
-            # Python builds the command string, Windows executes the command, sends the XML back to Python as result.stdout, Python parses XML
+            # python builds the command string, Windows executes the command, sends the XML back to Python as result.stdout, Python parses XML
             result = subprocess.run(
                 ps_cmd,
                 shell=True, # tells Python to open a PowerShell to run the command
@@ -62,17 +62,20 @@ def event_log_scrapper():
             )
             # wraps the raw data from the OS and normalizes it into a format thats easy to read in one XML file
             if result.stdout.strip():
+                # turns raw CSV output into a format that can be iterable over in Python, and extract specific fields for each error event
                 csv_reader = csv.reader(io.StringIO(result.stdout.strip()))
-                next(csv_reader, None)
+                next(csv_reader, None) # skip the header row of the CSV output since it just contains column names 
 
+                # assign 4 variables to the 4 columns of the CSV output, and insert those values into the system_events table 
                 for row in csv_reader:
-                    if len(row) > 4:
+                    if len(row) < 4:
                         continue
                     event_id = row[0]
                     timestamp = row[1]
                     provider = row[2]
                     description = row[3]
 
+                    # ignore typical Windows events that are not useful for diagnostics, preventing bloating the database
                     IGNORED_IDS = ['10016', '1108', '1014', '10010']
                     
                     if event_id in IGNORED_IDS:
