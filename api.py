@@ -111,7 +111,7 @@ def get_system_specs():
         cpu_cmd = 'powershell -Command "(Get-CimInstance Win32_Processor).Name"'
         cpu_output = subprocess.check_output(cpu_cmd, shell=True, text=True)
         cpu_info = cpu_output.strip()
-    except:
+    except Exception as e:
         cpu_info = platform.processor()
 
     try: 
@@ -121,8 +121,8 @@ def get_system_specs():
         
         # most devices have two GPUs like a integrated one and dedicated one, this searches for the performance GPU instead
         gpu_info = next((gpu for gpu in gpu_lines if "NVIDIA" in gpu.upper()), gpu_lines[0])
-    except:
-        gpu_info = "Unknown GPU"
+    except Exception as e:
+        gpu_info = "Unknown GPU: " + str(e)
     
     mem = psutil.virtual_memory()
     # computer hardware reports memory in bytes, so converting 1024^3 is necessary to convert it into Gigabytes, to .1 decimal place

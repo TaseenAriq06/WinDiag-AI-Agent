@@ -66,6 +66,9 @@ def event_log_scrapper():
                 csv_reader = csv.reader(io.StringIO(result.stdout.strip()))
                 next(csv_reader, None) # skip the header row of the CSV output since it just contains column names 
 
+                # ignore typical Windows events that are not useful for diagnostics, preventing bloating the database
+                IGNORED_IDS = {'10016', '1108', '1014', '10010'}
+
                 # assign 4 variables to the 4 columns of the CSV output, and insert those values into the system_events table 
                 for row in csv_reader:
                     if len(row) < 4:
@@ -74,9 +77,6 @@ def event_log_scrapper():
                     timestamp = row[1]
                     provider = row[2]
                     description = row[3]
-
-                    # ignore typical Windows events that are not useful for diagnostics, preventing bloating the database
-                    IGNORED_IDS = ['10016', '1108', '1014', '10010']
                     
                     if event_id in IGNORED_IDS:
                         continue

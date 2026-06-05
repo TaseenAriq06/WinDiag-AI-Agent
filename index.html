@@ -604,7 +604,12 @@
                         <td style="white-space: nowrap;">${cleanRowTime}</td>
                         <td><span class="badge" style="background-color: ${rowColors.badgeBg}; color: ${rowColors.badgeText};">${error.event_id}</span></td>
                         <td><strong>${error.title}</strong></td>
-                        <td>${error.provider}</td>
+                        <td>
+                            <div style="font-weight: bold;">${error.provider}</div>
+                            <div style="color: #6b7280; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">
+                                ${error.description}
+                            </div>
+                        </td>
                     </tr>
                 `;
                 tableBody.innerHTML += row;
