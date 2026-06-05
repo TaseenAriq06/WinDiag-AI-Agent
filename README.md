@@ -104,7 +104,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 | Layer | Technology | Purpose |
 |---|---|---|
 | **Agent** | Python 3.12, psutil | Hardware metric collection, battery/power state |
-| **Event Parsing** | wevtutil (Windows CLI), xml.etree.ElementTree | Windows Event Log extraction and XML parsing |
+| **Event Parsing** | PowerShell (`Get-WinEvent`), csv | Windows Event Log extraction and clean native description rendering |
 | **Database** | SQLite (stdlib `sqlite3`) | Persistent storage of telemetry and event records |
 | **API** | FastAPI, Uvicorn | REST API server exposing telemetry and diagnostic endpoints |
 | **AI** | Google Gemini 2.5 Flash (`google-genai`) | Natural language root cause analysis for system events |
@@ -264,7 +264,6 @@ All endpoints are served at `http://127.0.0.1:8000`
   "description": "The system rebooted without cleanly shutting down first."
 }
 ```
-
 ---
 
 ## Monitored Windows Events
