@@ -254,6 +254,7 @@ All endpoints are served at `http://127.0.0.1:8000`
 | `GET` | `/api/live` | Current CPU, RAM, GPU %, network Mbps, top processes, active sockets |
 | `GET` | `/api/system-specs` | OS, CPU, GPU, RAM, disk, core count, boot time |
 | `POST` | `/api/analyze-error` | Sends event data to Gemini and returns a structured diagnostic report |
+| `GET` | `/api/health-summary` | Requests a 24-hour summary report of average/highest CPU and RAM usages |
 
 **Example — `/api/analyze-error` request body:**
 ```json
