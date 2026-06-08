@@ -52,48 +52,48 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 ## Architecture
 
 ```
-				┌─────────────────────────────────────────────────────────┐
-				│                    Windows Startup                      │
-				│              silent_runner.vbs (invisible)              │
-				└───────────────────────┬─────────────────────────────────┘
-				                        │
-				                        ▼
-				┌──────────────────────────────────────────────────────────┐
-				│                   start_all.bat                          │
-				│  ┌─────────────────┐     ┌───────────────────────────┐   │
-				│  │   agent.py      │     │  uvicorn api:app          │   │
-				│  │                 │     │  (port 8000, background)  │   │
-				│  │ - psutil        │     └───────────────────────────┘   │
-				│  │ - wevtutil      │                                     │
-				│  │ - SQLite writes │                                     │
-				│  └────────┬────────┘                                     │
-				└───────────┼──────────────────────────────────────────────┘
-				            │
-				            ▼
-				┌─────────────────────┐        ┌───────────────────────────┐
-				│   diagnostic.db     │◄──────►│   api.py (FastAPI)        │
-				│   (SQLite)          │        │                           │
-				│                     │        │  GET /api/telemetry       │
-				│  - telemetry table  │        │  GET /api/errors          │
-				│  - system_events    │        │  GET /api/live            │
-				│    table            │        │  GET /api/system-specs    │
-				└─────────────────────┘        │  POST /api/analyze-error  │
-				                               └──────────────┬────────────┘
-												 			  │
-												┌─────────────▼─────────────┐
-												│    Google Gemini API      │
-												│    (gemini-2.5-flash)     │
-												└──────────────┬────────────┘
-												               │
-												┌──────────────▼─────────────┐
-												│    index.html              │
-												│    (Dashboard Frontend)    │
-												│                            │
-												│   - Chart.js telemetry     │
-												│   - Event log table        │
-												│   - AI modal panel         │
-												│   - Process/socket view    │
-												└────────────────────────────┘
+					┌─────────────────────────────────────────────────────────┐
+					│                    Windows Startup                      │
+					│              silent_runner.vbs (invisible)              │
+					└───────────────────────┬─────────────────────────────────┘
+					                        │
+					                        ▼
+					┌──────────────────────────────────────────────────────────┐
+					│                   start_all.bat                          │
+					│  ┌─────────────────┐     ┌───────────────────────────┐   │
+					│  │   agent.py      │     │  uvicorn api:app          │   │
+					│  │                 │     │  (port 8000, background)  │   │
+					│  │ - psutil        │     └───────────────────────────┘   │
+					│  │ - wevtutil      │                                     │
+					│  │ - SQLite writes │                                     │
+					│  └────────┬────────┘                                     │
+					└───────────┼──────────────────────────────────────────────┘
+					            │
+					            ▼
+					┌─────────────────────┐        ┌───────────────────────────┐
+					│   diagnostic.db     │◄──────►│   api.py (FastAPI)        │
+					│   (SQLite)          │        │                           │
+					│                     │        │  GET /api/telemetry       │
+					│  - telemetry table  │        │  GET /api/errors          │
+					│  - system_events    │        │  GET /api/live            │
+					│    table            │        │  GET /api/system-specs    │
+					└─────────────────────┘        │  POST /api/analyze-error  │
+					                               └──────────────┬────────────┘
+													 			  │
+													┌─────────────▼─────────────┐
+													│    Google Gemini API      │
+													│    (gemini-2.5-flash)     │
+													└──────────────┬────────────┘
+													               │
+													┌──────────────▼─────────────┐
+													│    index.html              │
+													│    (Dashboard Frontend)    │
+													│                            │
+													│   - Chart.js telemetry     │
+													│   - Event log table        │
+													│   - AI modal panel         │
+													│   - Process/socket view    │
+													└────────────────────────────┘
 ```
 
 ---
