@@ -4,7 +4,31 @@ let allErrors = [];
 let filteredErrors = []; 
 let currentPage = 1;
 const rowsPerPage = 10;
-let activeErrorForAI = null; // Track error for AI
+let activeErrorForAI = null; 
+
+const moonIcon = `<svg style="width:18px;height:18px;margin-right:6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>`;
+const sunIcon = `<svg style="width:18px;height:18px;margin-right:6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`;
+
+const themeToggleBtn = document.getElementById('themeToggle');
+
+if(localStorage.getItem('theme') == 'dark'){
+    document.body.classList.add('dark-mode');
+    themeToggleBtn.innerHTML = sunIcon + 'Light Mode';
+} else {
+    themeToggleBtn.innerHTML = moonIcon + 'Dark Mode';
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+
+    if(document.body.classList.contains('dark-mode')){
+        themeToggleBtn.innerHTML = sunIcon + 'Light Mode';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        themeToggleBtn.innerHTML = moonIcon + 'Dark Mode';
+        localStorage.setItem('theme', 'light');
+    }
+});
 
 function filterLogs(resetPage = true) {
     const query = document.getElementById('searchInput').value.toLowerCase();
@@ -41,7 +65,6 @@ window.sortLogs = function(column) {
     renderTable();
 };
 
-// --- CSV Export Engine ---
 window.exportToCSV = function() {
     if (filteredErrors.length === 0) {
         alert("No logs match your current filter. Nothing to export!");
@@ -116,7 +139,7 @@ async function fetchHealthSummary(){
     const summaryBox = document.getElementById('healthSummaryBox')
 
     summaryBox.style.display = 'block';
-    summaryBox.innerHTML = '<span style="color: #6b7280; font-style: italic;">Analyzing 24-hour telemetry vault...</span>';
+    summaryBox.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Analyzing 24-hour telemetry vault...</span>';
 
     try {
         const response = await fetch('http://127.0.0.1:8000/api/health-summary', { cache: 'no-store' });
@@ -124,22 +147,22 @@ async function fetchHealthSummary(){
 
         summaryBox.innerHTML = `
             <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Avg CPU %:</span> <strong>${data.avg_cpu}%</strong>
+                <span style="color: var(--text-muted);">Avg CPU %:</span> <strong style="color: var(--text-main);">${data.avg_cpu}%</strong>
             </div>
             <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Peak CPU %:</span> <strong style="color: ${data.peak_cpu > 80 ? '#ef4444' : '#1f2937'};">${data.peak_cpu}%</strong>
+                <span style="color: var(--text-muted);">Peak CPU %:</span> <strong style="color: ${data.peak_cpu > 80 ? '#ef4444' : 'var(--text-main)'};">${data.peak_cpu}%</strong>
             </div>
             <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Avg RAM %:</span> <strong>${data.avg_ram}%</strong>
+                <span style="color: var(--text-muted);">Avg RAM %:</span> <strong style="color: var(--text-main);">${data.avg_ram}%</strong>
             </div>
             <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Peak RAM %:</span> <strong>${data.peak_ram}%</strong>
+                <span style="color: var(--text-muted);">Peak RAM %:</span> <strong style="color: var(--text-main);">${data.peak_ram}%</strong>
             </div>
             <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Time >80% CPU:</span> <strong>${data.high_cpu_seconds} sec</strong>
+                <span style="color: var(--text-muted);">Time >80% CPU:</span> <strong style="color: var(--text-main);">${data.high_cpu_seconds} sec</strong>
             </div>
-            <div style="padding-top: 8px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
-                <span style="color: #6b7280;">Critical Errors:</span> 
+            <div style="padding-top: 8px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Critical Errors:</span> 
                 <strong style="color: ${data.critical_events_24h > 0 ? '#ef4444' : '#10b981'};">${data.critical_events_24h}</strong>
             </div>
         `;
@@ -158,8 +181,8 @@ async function loadChartHistory() {
             telemetryChart.data.labels.push(timeLabel);
             telemetryChart.data.datasets[0].data.push(row.cpu_percent);
             telemetryChart.data.datasets[1].data.push(row.ram_percent);
-            telemetryChart.data.datasets[2].data.push(0); // GPU not in telemetry table yet
-            telemetryChart.data.datasets[3].data.push(0); // network not in telemetry table yet
+            telemetryChart.data.datasets[2].data.push(0); 
+            telemetryChart.data.datasets[3].data.push(0); 
         });
         telemetryChart.update();
     } catch (e) { console.error("Failed to load chart history", e); }
@@ -189,9 +212,9 @@ async function fetchLiveTelemetry() {
 
         data.top_processes.forEach(proc => {
             const row = `
-                <div style="display: flex; justify-content: space-between; background: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                    <strong style="color: #1f2937;">${proc.name}</strong>
-                    <span style="color: #6b7280;">
+                <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <strong style="color: var(--text-main);">${proc.name}</strong>
+                    <span style="color: var(--text-muted);">
                         <span style="color: #10b981; font-weight: bold;">${proc.ram}% RAM</span> | 
                         <span style="color: #2563eb;">${proc.cpu}% CPU</span>
                     </span>
@@ -204,13 +227,13 @@ async function fetchLiveTelemetry() {
         networkBox.innerHTML = ''; 
 
         if (data.top_connections.length === 0) {
-            networkBox.innerHTML = '<div style="color: #6b7280; padding: 8px;">No active connections found.</div>';
+            networkBox.innerHTML = '<div style="color: var(--text-muted); padding: 8px;">No active connections found.</div>';
         } else {
             data.top_connections.forEach(conn => {
                 const row = `
-                    <div style="display: flex; justify-content: space-between; background: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                        <strong style="color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${conn.process}">${conn.process}</strong>
-                        <span style="color: #6b7280;">
+                    <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                        <strong style="color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${conn.process}">${conn.process}</strong>
+                        <span style="color: var(--text-muted);">
                             <span style="color: #f06e69; font-weight: bold;">${conn.ip}</span> : ${conn.port}
                         </span>
                     </div>
@@ -334,7 +357,7 @@ function renderTable() {
     tableBody.innerHTML = ''; 
     
     if (filteredErrors.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #6b7280;">No system logs match your filters.</td></tr>';
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No system logs match your filters.</td></tr>`;
         document.getElementById('pageIndicator').innerText = `of 1`;
         document.getElementById('pageInput').value = 1;
         document.getElementById('prevBtn').disabled = true;
@@ -355,14 +378,15 @@ function renderTable() {
         const rowDate = new Date(error.timestamp);
         const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
         const rowColors = getSeverityColors(error.severity);
+        
         const row = `
             <tr class="clickable-row" onclick="openModal(${globalIndex})">
                 <td style="white-space: nowrap;">${cleanRowTime}</td>
                 <td><span class="badge" style="background-color: ${rowColors.badgeBg}; color: ${rowColors.badgeText};">${error.event_id}</span></td>
                 <td><strong>${error.title}</strong></td>
                 <td>
-                    <div style="font-weight: bold;">${error.provider}</div>
-                    <div style="color: #6b7280; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">
+                    <div style="font-weight: bold; color: var(--text-main);">${error.provider}</div>
+                    <div style="color: var(--text-muted); font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">
                         ${error.description}
                     </div>
                 </td>
@@ -465,7 +489,6 @@ function updateUptime() {
     document.getElementById('spec-uptime').innerText = `${d}d ${h}h ${m}m ${s}s`;
 }
 
-// Startup Execution
 setInterval(updateUptime, 1000);
 loadChartHistory();
 fetchSystemSpecs();

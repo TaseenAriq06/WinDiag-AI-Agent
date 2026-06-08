@@ -43,7 +43,7 @@ def fetch_data(query: str, params: tuple = (), limit: int = 100):
     
     # make sure the most recent data is on the top and a limit to make sure it doesn't load every single row to freeze the server
     # adding params makes sure that the API builds custom queries, immune from SQL Injections
-    cursor.execute(f"{query} ORDER BY timestamp DESC LIMIT {limit}", params)
+    cursor.execute(f"{query} ORDER BY timestamp DESC LIMIT {int(limit)}", params)
     rows = cursor.fetchall()
     conn.close()
 
