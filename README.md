@@ -28,7 +28,6 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 - [Running the Project](#running-the-project)
 - [Automated Startup](#automated-startup)
 - [API Reference](#api-reference)
-- [Monitored Windows Events](#monitored-windows-events)
 - [Known Limitations](#known-limitations)
 
 ---
@@ -264,22 +263,6 @@ All endpoints are served at `http://127.0.0.1:8000`
   "description": "The system rebooted without cleanly shutting down first."
 }
 ```
----
-
-## Monitored Windows Events
-
-| Event ID | Classification | Severity |
-|---|---|---|
-| 41 | Kernel-Power Failure | 🔴 High |
-| 1001 | BugCheck (Blue Screen / BSOD) | 🔴 High |
-| 88 | Thermal Throttling | 🔴 High |
-| 4101 | Display Driver Crash (TDR) | 🟠 Medium |
-| 18 | WHEA-Logger Hardware Error | 🟠 Medium |
-| 7011 | Service Control Manager Timeout | 🟠 Medium |
-| 10317 | Network Adapter (NDIS) Error | 🟡 Low |
-| 10010 | DCOM Server Timeout | 🟡 Low |
-| 6005 | System Startup (Event Log Start) | 🟡 Low |
-
 ---
 
 ## Known Limitations
