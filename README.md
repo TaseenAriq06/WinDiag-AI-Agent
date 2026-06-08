@@ -8,7 +8,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 <!-- Replace the line below with a screenshot or GIF of your dashboard -->
 ### Live Hardware Telemetry & System Specs
-<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/dashboard_telemetry2.jpg" width="100%"/>
+<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/dashboard_telemetry3.jpg" width="100%"/>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/event_log_2.jpg" width="100%"/>
@@ -254,6 +254,7 @@ All endpoints are served at `http://127.0.0.1:8000`
 | `GET` | `/api/live` | Current CPU, RAM, GPU %, network Mbps, top processes, active sockets |
 | `GET` | `/api/system-specs` | OS, CPU, GPU, RAM, disk, core count, boot time |
 | `POST` | `/api/analyze-error` | Sends event data to Gemini and returns a structured diagnostic report |
+| `GET` | `/api/health-summary` | Requests a 24-hour summary report of average/highest CPU and RAM usages |
 
 **Example — `/api/analyze-error` request body:**
 ```json
