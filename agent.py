@@ -1,8 +1,7 @@
 # psutil is responsible for getting system status, subprocess allows you to run commands like in Windows CMD
-# xml import is able to parse messy info from an XML file, sqlite3 is the local database engine storing data
+# csv import is able to parse messy info from a command line to a CSV file, sqlite3 is the local database engine storing data
 import psutil
 import subprocess
-#import xml.etree.ElementTree as ET
 import sqlite3
 import threading
 import time
