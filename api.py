@@ -217,12 +217,18 @@ def get_live_metrics():
     # only interested in the top 5 processes that are using the most RAM and discard the rest, keeps JSON small and dashboard clean
     top_procs = sorted(processes, key=lambda p: p['memory_percent'] or 0, reverse=True)[:5]
 
+    # find how many threads the CPU has 
+    cores = psutil.cpu_count(logical=True) or 1
+
     clean_procs = []
     for p in top_procs:
+        # divide the raw process CPU by the total cores 
+        normalized_cpu = (p['cpu_percent'] or 0) / cores
+
         clean_procs.append({
             "name": p['name'],
             "ram": round(p['memory_percent'] or 0, 1),
-            "cpu": round(p['cpu_percent'] or 0, 1)
+            "cpu": round(normalized_cpu, 1)
         })
 
     top_conns = []
