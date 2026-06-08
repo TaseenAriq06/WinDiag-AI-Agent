@@ -40,25 +40,23 @@ except Exception as e:
     print(f"Warning: Gemini Client failed to initialize. Error {e}")
 
 # save the total bytes sent/received at the exact moment the server starts, and the current time
-FAST_CACHE = {"gpu": 0.0, "net_mbps": 0.00}
+FAST_CACHE = {"gpu": 0.0, "net_mbps": 0.00, "top_processes": []}
 last_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
 last_net_time = time.time()
 
 def background_sensor_loop():
     """Runs continuously in the API background, calculating slow metrics without blocking the server."""
     global last_net_bytes, last_net_time
+
     while True:
         # calculates number of bytes sent and received as well as current time, and calculates the difference
         current_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
         current_time_now = time.time()
         time_diff = current_time_now - last_net_time
-
-        # total number of bytes from last call to current call, convert from byte to bits, divide by 1 mill for Megabits divide by elapsed time
-        if time_diff > 0:
-            net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff
-        else:
-            net_mbps = 0.0
         
+        # total number of bytes from last call to current call, convert from byte to bits, divide by 1 mill for Megabits divide by elapsed time
+        net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff if time_diff > 0 else 0.0
+       
         # log the current bytes and time, so that the API can receive the latest data instantly from fast cache
         last_net_bytes = current_net_bytes
         last_net_time = current_time_now
@@ -69,13 +67,27 @@ def background_sensor_loop():
             gpu_cmd = 'powershell -Command "((Get-Counter \'\\GPU Engine(*engtype_3D)\\Utilization Percentage\' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum).Sum"'
             gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True, timeout=2).strip()
             gpu = round(float(gpu_output), 1) if gpu_output else 0.0
-            
-            if gpu > 100.0: gpu = 100.0
-            FAST_CACHE["gpu"] = gpu
+            FAST_CACHE["gpu"] = min(gpu, 100.0)
         except:
             FAST_CACHE["gpu"] = 0.0
+        
+        processes_data = []
+        # this asks the OS for a list of every running process
+        for proc in psutil.process_iter(['name', 'memory_percent', 'cpu_percent']):
+            try:
+                processes_data.append({
+                    "name": proc.info['name'],
+                    "ram": round(proc.info['memory_percent'] or 0, 1),
+                    "cpu": round(proc.info['cpu_percent'] or 0, 1)
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
 
-        # make sure script wont hang forever, gives up after 2 seconds
+        # only interested in the top 5 processes that are using the most RAM and discard the rest, keeps JSON small and dashboard clean
+        top_procs = sorted(processes_data, key=lambda p: p['ram'], reverse=True)[:5]
+        # save it to the cache
+        FAST_CACHE["top_processes"] = top_procs
+
         time.sleep(2)
 
 def fetch_data(query: str, params: tuple = (), limit: int = 100):
@@ -206,30 +218,7 @@ def get_live_metrics():
     gpu = FAST_CACHE["gpu"]
     net_mbps = FAST_CACHE["net_mbps"]
 
-    processes = []
-
-    # this asks the OS for a list of every running process
-    for proc in psutil.process_iter(['name', 'memory_percent', 'cpu_percent']):
-        try:
-            processes.append(proc.info)
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-    # only interested in the top 5 processes that are using the most RAM and discard the rest, keeps JSON small and dashboard clean
-    top_procs = sorted(processes, key=lambda p: p['memory_percent'] or 0, reverse=True)[:5]
-
-    # find how many threads the CPU has 
-    cores = psutil.cpu_count(logical=True) or 1
-
-    clean_procs = []
-    for p in top_procs:
-        # divide the raw process CPU by the total cores 
-        normalized_cpu = (p['cpu_percent'] or 0) / cores
-
-        clean_procs.append({
-            "name": p['name'],
-            "ram": round(p['memory_percent'] or 0, 1),
-            "cpu": round(normalized_cpu, 1)
-        })
+    clean_procs = FAST_CACHE["top_processes"]
 
     top_conns = []
     try:
