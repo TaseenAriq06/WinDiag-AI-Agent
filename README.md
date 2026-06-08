@@ -78,22 +78,22 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 │  - system_events    │        │  GET /api/live            │
 │    table            │        │  GET /api/system-specs    │
 └─────────────────────┘        │  POST /api/analyze-error  │
-													 	   └──────────────┬───────────┘
-					                                    │
-																┌─────────────▼─────────────┐
-																│    Google Gemini API      │
-																│    (gemini-2.5-flash)     │
-																└──────────────┬────────────┘
-																               │
-																┌──────────────▼─────────────┐
-																│    index.html              │
-																│    (Dashboard Frontend)    │
-																│                            │
-																│   - Chart.js telemetry     │
-																│   - Event log table        │
-																│   - AI modal panel         │
-																│   - Process / socket view  │
-																└────────────────────────────┘
+                               └──────────────┬───────────┘
+								 			  │
+								┌─────────────▼─────────────┐
+								│    Google Gemini API      │
+								│    (gemini-2.5-flash)     │
+								└──────────────┬────────────┘
+								               │
+								┌──────────────▼─────────────┐
+								│    index.html              │
+								│    (Dashboard Frontend)    │
+								│                            │
+								│   - Chart.js telemetry     │
+								│   - Event log table        │
+								│   - AI modal panel         │
+								│   - Process/socket view    │
+								└────────────────────────────┘
 ```
 
 ---
