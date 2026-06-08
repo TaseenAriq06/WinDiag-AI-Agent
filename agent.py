@@ -52,7 +52,7 @@ def event_log_scrapper():
             
             # this powershell command uses a filter to retrieve level 1 & 2 errors limits, and formats the output as CSV for easy parsing in Python
             # this powershell command retrieves level 1 & 2 errors from the last 30 days, formatting the output as CSV
-            ps_cmd = """powershell -Command "$startDate = (Get-Date).AddDays(-10); Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2} -ErrorAction SilentlyContinue | Where-Object {$_.TimeCreated -ge $startDate} | Select-Object Id, @{N='TimeCreated';E={$_.TimeCreated.ToString('s')}}, ProviderName, Message | ConvertTo-Csv -NoTypeInformation" """
+            ps_cmd = """powershell -Command "$startDate = (Get-Date).AddDays(-30); Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2} -ErrorAction SilentlyContinue | Where-Object {$_.TimeCreated -ge $startDate} | Select-Object Id, @{N='TimeCreated';E={$_.TimeCreated.ToString('s')}}, ProviderName, Message | ConvertTo-Csv -NoTypeInformation" """
 
             # python builds the command string, Windows executes the command, sends the XML back to Python as result.stdout, Python parses XML
             result = subprocess.run(
