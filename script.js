@@ -194,6 +194,8 @@ async function fetchLiveFast() {
         const data = await response.json();
         document.getElementById('live-val-cpu').innerText = data.cpu.toFixed(1);
         document.getElementById('live-val-ram').innerText = data.ram.toFixed(1);
+        document.getElementById('live-val-gpu').innerText = data.gpu.toFixed(1);
+        document.getElementById('live-val-net').innerText = data.wifi_mbps.toFixed(2);
     } catch(e) {}
 }
 
@@ -282,7 +284,7 @@ window.openModal = function(globalIndex) {
         responseContainer.style.display = 'none';
         responseText.innerText = '';
         aiBtn.disabled = false;
-        aiBtn.innerText = 'Ask AI For Recommendation';
+        aiBtn.innerText = 'Analyze with Gemini AI';
     }
 
     const rowDate = new Date(error.timestamp);

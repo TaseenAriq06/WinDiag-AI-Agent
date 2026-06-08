@@ -8,11 +8,21 @@ import sqlite3
 import platform
 import psutil
 import time
+import threading
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
-app = FastAPI(title = "Diagnostic Agent API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # start the background sensor loop before the server accepts any requests
+    sensor_thread = threading.Thread(target=background_sensor_loop, daemon=True)
+    sensor_thread.start()
+    yield
+    # since the thread is daemon, it will die automatically once the main process ends 
+
+app = FastAPI(title = "Diagnostic Agent API", lifespan=lifespan)
 
 # CORS tells the FastAPI server to tell the browser that it allows requests from anyone, so let the data through
 # since browsers have strict origin policies, they can block fetching data that aren't on the same domain
@@ -30,8 +40,43 @@ except Exception as e:
     print(f"Warning: Gemini Client failed to initialize. Error {e}")
 
 # save the total bytes sent/received at the exact moment the server starts, and the current time
+FAST_CACHE = {"gpu": 0.0, "net_mbps": 0.00}
 last_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
 last_net_time = time.time()
+
+def background_sensor_loop():
+    """Runs continuously in the API background, calculating slow metrics without blocking the server."""
+    global last_net_bytes, last_net_time
+    while True:
+        # calculates number of bytes sent and received as well as current time, and calculates the difference
+        current_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
+        current_time_now = time.time()
+        time_diff = current_time_now - last_net_time
+
+        # total number of bytes from last call to current call, convert from byte to bits, divide by 1 mill for Megabits divide by elapsed time
+        if time_diff > 0:
+            net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff
+        else:
+            net_mbps = 0.0
+        
+        # log the current bytes and time, so that the API can receive the latest data instantly from fast cache
+        last_net_bytes = current_net_bytes
+        last_net_time = current_time_now
+        FAST_CACHE["net_mbps"] = round(net_mbps, 2)
+
+        try:
+            # run a powershell command to find how hard the gpu engine is working percentage wise with subprocess
+            gpu_cmd = 'powershell -Command "((Get-Counter \'\\GPU Engine(*engtype_3D)\\Utilization Percentage\' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum).Sum"'
+            gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True, timeout=2).strip()
+            gpu = round(float(gpu_output), 1) if gpu_output else 0.0
+            
+            if gpu > 100.0: gpu = 100.0
+            FAST_CACHE["gpu"] = gpu
+        except:
+            FAST_CACHE["gpu"] = 0.0
+
+        # make sure script wont hang forever, gives up after 2 seconds
+        time.sleep(2)
 
 def fetch_data(query: str, params: tuple = (), limit: int = 100):
     """Connects to SQLite, runs a query, and formats the outputs cleanly."""
@@ -49,7 +94,7 @@ def fetch_data(query: str, params: tuple = (), limit: int = 100):
 
     # it turns the rows from Python dictionaries into a JSON object that is easy for JavaScript to read and fetch data from
     return [dict(row) for row in rows]
-
+    
 @app.get("/")
 def home():
     return {"message": "Diagnostic API Server is Online"}
@@ -76,7 +121,9 @@ def get_live_fast():
     return {
         "timestamp": time.strftime("%H:%M:%S"),
         "cpu": cpu,
-        "mem": mem
+        "mem": mem,
+        "gpu": FAST_CACHE["gpu"],
+        "wifi_mbps": FAST_CACHE["net_mbps"]
     }
 
 @app.get("/api/errors")
@@ -151,33 +198,13 @@ def get_system_specs():
     }
 @app.get("/api/live")
 def get_live_metrics():
-    global last_net_bytes, last_net_time
 
     current_time = time.strftime("%H:%M:%S")
     cpu = psutil.cpu_percent(interval=0.1)
     ram = psutil.virtual_memory().percent
-    current_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
-    current_time_now = time.time()
-    time_diff = current_time_now - last_net_time
-
-    if time_diff > 0:
-        # take the difference in total bytes since the last time the function ran, * by 8 to convert bits to bytes, divide by 1 million
-        # to get megabits and divide by elapsed time to get current network speed, thats why global was used to remember until next call
-        net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff
-    else:
-        net_mbps = 0.0
-    last_net_bytes = current_net_bytes
-    last_net_time = current_time_now
-
-    try:
-        # powershell command bypasses the limit of psutil library to talk directly to the Windows OS engine
-        gpu_cmd = 'powershell -Command "((Get-Counter \'\\GPU Engine(*engtype_3D)\\Utilization Percentage\' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum).Sum"'
-        # if Windows takes too longs to report the GPU name, returns 0.0
-        gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True, timeout=2).strip()
-        gpu = round(float(gpu_output), 1) if gpu_output else 0.0
-        if gpu > 100.0: gpu = 100.0
-    except:
-        gpu = 0.0
+    
+    gpu = FAST_CACHE["gpu"]
+    net_mbps = FAST_CACHE["net_mbps"]
 
     processes = []
 

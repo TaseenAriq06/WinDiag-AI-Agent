@@ -132,6 +132,15 @@ def telemetry_loop():
             print(f"[Thread-1] Error in telemetry: {e}")
         finally:
             if conn: conn.close()
+
+def cleanup_old_data():
+    conn = sqlite3.connect('diagnostic.db')
+    cursor = conn.cursor()
+    # delete telemetry data older than 7 days 
+    cursor.execute("DELETE FROM telemetry WHERE timestamp < datetime('now', '-7 days')")
+    conn.commit()
+    if conn: conn.close()
+
 # the moment the script runs, it starts a separate thread that runs the event_log_scrapper function in the background
 # while the main thread runs the telemetry_loop function, allowing both to operate simultaneously without blocking each other
 if __name__ == "__main__":
