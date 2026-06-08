@@ -83,9 +83,9 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 													┌─────────────▼─────────────┐
 													│    Google Gemini API      │
 													│    (gemini-2.5-flash)     │
-													└──────────────┬────────────┘
-													               │
-													┌──────────────▼─────────────┐
+													└─────────────┬─────────────┘
+															      │
+													┌─────────────▼──────────────┐
 													│    index.html              │
 													│    (Dashboard Frontend)    │
 													│                            │
