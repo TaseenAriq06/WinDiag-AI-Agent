@@ -425,40 +425,17 @@ async function checkSystemErrors() {
     try {
         const response = await fetch('http://127.0.0.1:8000/api/errors', { cache: 'no-store' });
         const result = await response.json();
+        
         if (result.count > 0) {
-            const latestError = result.errors[0];
-            const alertBanner = document.getElementById('alertBanner');
-            const alertText = document.getElementById('alertText');
-            
-            const bannerDate = new Date(latestError.timestamp);
-            const cleanBannerTime = bannerDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-            const colors = getSeverityColors(latestError.severity);
-            
-            alertBanner.style.backgroundColor = colors.bg;
-            alertBanner.style.color = colors.text;
-
-            const now = new Date();
-            const hoursDifference = Math.abs(now - bannerDate) / 36e5; 
-
-            if (hoursDifference < 24) {
-                alertText.innerHTML = `
-                    <strong>⚠️ ${latestError.title}</strong><br>
-                    <em>${cleanBannerTime}</em><br><br>
-                    ${latestError.description}<br>
-                    <strong>Recommended Action:</strong> ${latestError.action}
-                `;
-                alertBanner.style.display = 'block';
-            } else {
-                alertBanner.style.display = 'none';
-            }
-            
             allErrors = result.errors;
             filterLogs(false); 
         } else {
             allErrors = [];
             filterLogs(false);
         }
-    } catch (error) { console.error("Error fetching system errors API:", error); }
+    } catch (error) { 
+        console.error("Error fetching system errors API:", error); 
+    }
 }
 
 let systemBootTime = 0
