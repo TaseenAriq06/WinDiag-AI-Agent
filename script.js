@@ -1,3 +1,4 @@
+// these are global variables that every function can read and write to, 'let' can be change but 'const' cant
 let sortDirection = 1; 
 let currentSortColumn = '';
 let allErrors = [];
@@ -9,15 +10,19 @@ let activeErrorForAI = null;
 const moonIcon = `<svg style="width:18px;height:18px;margin-right:6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>`;
 const sunIcon = `<svg style="width:18px;height:18px;margin-right:6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`;
 
+// save a variable by getting the element themeToggle from the document as a button variable 
 const themeToggleBtn = document.getElementById('themeToggle');
 
+// localStorage stores the user's preference if they originally had dark mode or light mode and forces <body> to set the preference
 if(localStorage.getItem('theme') == 'dark'){
+    // targets the main body of HTML file, tells the browser to add the word 'dark-mode' as a class list to use CSS attributes defined
     document.body.classList.add('dark-mode');
     themeToggleBtn.innerHTML = sunIcon + 'Light Mode';
 } else {
     themeToggleBtn.innerHTML = moonIcon + 'Dark Mode';
 }
 
+// executes arrow function when mouse clicks on dark mode
 themeToggleBtn.addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
 
@@ -504,10 +509,12 @@ async function checkSystemErrors() {
 
 let systemBootTime = 0
 
+// fetch system specifications and display in the left panel, async so it doesn't block the initial page load
 async function fetchSystemSpecs() {
     try {
         const response = await fetch('http://127.0.0.1:8000/api/system-specs');
         const specs = await response.json();
+        // overrides the specs with real spec info from the API response
         document.getElementById('spec-os').innerText = specs.os;
         document.getElementById('spec-cpu').innerText = specs.cpu;
         document.getElementById('spec-gpu').innerText = specs.gpu;
@@ -516,7 +523,9 @@ async function fetchSystemSpecs() {
         document.getElementById('spec-disk').innerText = specs.disk;
         
         systemBootTime = specs.boot_time;
-    } catch (error) { console.error("Error fetching system specs:", error); }
+    } catch (error){ 
+        console.error("Error fetching system specs:", error); 
+    }
 }
 
 function updateUptime() {
@@ -538,6 +547,7 @@ fetchSystemSpecs();
 checkSystemErrors();
 fetchLiveTelemetry(); 
 
+// a continuous loop that calls Python every 2 seconds to fetch KPI usages, and 15 seconds to grab data to update the live chart
 setInterval(fetchLiveFast, 2000)
 setInterval(fetchLiveTelemetry, 15000); 
 setInterval(checkSystemErrors, 10000);
