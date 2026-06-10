@@ -152,6 +152,11 @@ function getSeverityColors(severity) {
     }
 }
 
+// check the theme of the dashboard and set initial chart text/grid colors accordingly
+const isDarkTheme = document.body.classList.contains('dark-mode');
+const initTextColor = isDarkTheme ? '#94a3b8' : '#6b7280';
+const initGridColor = isDarkTheme ? '#334155' : '#e5e7eb';
+
 const ctx = document.getElementById('telemetryChart').getContext('2d');
 const telemetryChart = new Chart(ctx, {
     type: 'line',
@@ -169,22 +174,27 @@ const telemetryChart = new Chart(ctx, {
         plugins:{
             legend:{
                 labels:{
-                    color: '#6b7280'
+                    color: initTextColor
                 }
             }
         },
         scales: { 
+            x: {
+                ticks: { color: initTextColor },
+                grid: { color: initGridColor },
+            },
+
             y: { 
                 type: 'linear', display: true, position: 'left', beginAtZero: true, max: 100, 
                 title: { display: true, text: 'Utilization (%)', color: '#43785c' },
-                ticks: { color: '#6b7280' },
-                grid: { color: '#e5e7eb' }
+                ticks: { color: initTextColor },
+                grid: { color: initGridColor }
             },
             y1: { 
                 type: 'linear', display: true, position: 'right', beginAtZero: true, 
                 title: { display: true, text: 'Network (Mbps)', color: '#f06e69' },
-                ticks: { color: '#6b7280' }, 
-                grid: { drawOnChartArea: true, color: '#e5e7eb'} } 
+                ticks: { color: initTextColor }, 
+                grid: { drawOnChartArea: true, color: initGridColor} } 
         }
     }
 });
