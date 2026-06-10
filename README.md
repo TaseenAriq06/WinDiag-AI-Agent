@@ -6,9 +6,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ---
 
-<!-- Replace the line below with a screenshot or GIF of your dashboard -->
-### Live Hardware Telemetry & System Specs
-<img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/dashboard_telemetry3.jpg" width="100%"/>
+![Live Hardware Telemetry & System Specs](dashboard_telemetry3.jpg)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/TaseenAriq06/WinDiag-AI-Agent/main/assets/event_log_2.jpg" width="100%"/>
