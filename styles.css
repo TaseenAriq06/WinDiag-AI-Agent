@@ -30,12 +30,13 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 
 .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 
-.spec-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+.spec-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); text-align: center;}
 .spec-label { font-size: 0.85em; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
 .spec-value { font-size: 1.1em; color: var(--text-main); margin-top: 4px; }
 
 .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; table-layout: auto; }
-.log-table th, .log-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+.log-table th, .log-table td { padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--border-color); }
+.log-table td:nth-child(4){ text-align: left;}
 .log-table th { background-color: var(--table-header-bg); color: var(--text-muted); text-transform: uppercase; font-weight: bold; user-select: none; }
 .log-table th:hover { background-color: var(--table-hover); color: var(--text-main); }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
@@ -65,6 +66,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .kpi-value { font-size: 1.8em; font-weight: bold; }
 .kpi-unit { font-size: 0.5em; color: var(--text-muted); font-weight: normal; }
 
+
 #aiResponseText p {
     margin: 4px 0 8px 0;
     line-height: 1.4;
@@ -87,4 +89,21 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 #aiResponseText li {
     margin-bottom: 4px;
     font-size: 0.95rem;
+}
+
+#severityFilter option[value="high"]{
+    color: #eb7070;
+    font-weight: bold;
+}
+#severityFilter option[value="medium"]{
+    color: #de8546;
+    font-weight: bold;
+}
+#severityFilter option[value="low"]{
+    color: #d3f24b;
+    font-weight: bold;
+}
+#severityFilter option[value="all"]{
+    color: var(--text-main);
+    font-weight: bold;
 }

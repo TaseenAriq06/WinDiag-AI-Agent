@@ -24,9 +24,47 @@ themeToggleBtn.addEventListener('click', () => {
     if(document.body.classList.contains('dark-mode')){
         themeToggleBtn.innerHTML = sunIcon + 'Light Mode';
         localStorage.setItem('theme', 'dark');
+        
+        // change chart text to light gray and repaint if in dark mode
+        if (localStorage.getItem('theme') === 'dark'){
+            telemetryChart.options.plugins.legend.labels.color = '#94a3b8';
+
+            // x-Axis (bottom time labels)
+            telemetryChart.options.scales.x.ticks.color = '#94a3b8';
+            telemetryChart.options.scales.x.grid.color = '#334155';
+            
+            // y-Axis (left percentages)
+            telemetryChart.options.scales.y.ticks.color = '#94a3b8';
+            telemetryChart.options.scales.y.grid.color = '#334155';
+            
+            // y1-Axis (right network speed)
+            telemetryChart.options.scales.y1.ticks.color = '#94a3b8';
+            telemetryChart.options.scales.y1.grid.color = '#334155';
+
+            telemetryChart.update();
+        }
     } else {
         themeToggleBtn.innerHTML = moonIcon + 'Dark Mode';
         localStorage.setItem('theme', 'light');
+
+        // change chart text to dark gray and repaint
+        if(typeof telemetryChart !== 'undefined'){
+            telemetryChart.options.plugins.legend.labels.color = '#6b7280';
+
+            // x-Axis (bottom time labels)
+            telemetryChart.options.scales.x.ticks.color = '#6b7280';
+            telemetryChart.options.scales.x.grid.color = '#e5e7eb';
+            
+            // y-Axis (left percentages)
+            telemetryChart.options.scales.y.ticks.color = '#6b7280';
+            telemetryChart.options.scales.y.grid.color = '#e5e7eb';
+            
+            // y1-Axis (right network speed)
+            telemetryChart.options.scales.y1.ticks.color = '#6b7280';
+            telemetryChart.options.scales.y1.grid.color = '#e5e7eb';
+
+            telemetryChart.update();
+        }
     }
 });
 
@@ -120,17 +158,33 @@ const telemetryChart = new Chart(ctx, {
     data: {
         labels: [],
         datasets: [
-            { label: 'CPU Usage (%)', data: [], borderColor: '#2563eb', tension: 0.2, fill: false, yAxisID: 'y' },
-            { label: 'RAM Usage (%)', data: [], borderColor: '#10b981', tension: 0.2, fill: false, yAxisID: 'y' },
-            { label: 'GPU Usage (%)', data: [], borderColor: '#8b5cf6', tension: 0.2, fill: false, yAxisID: 'y' },
-            { label: 'Network Speed (Mbps)', data: [], borderColor: '#f06e69', tension: 0.2, fill: false, yAxisID: 'y1' }
+            { label: 'CPU Usage (%)', data: [], borderColor: '#2563eb', backgroundColor: '#2563eb33', tension: 0.2, fill: true, yAxisID: 'y' },
+            { label: 'RAM Usage (%)', data: [], borderColor: '#10b981', backgroundColor: '#10b98133', tension: 0.2, fill: true, yAxisID: 'y' },
+            { label: 'GPU Usage (%)', data: [], borderColor: '#8b5cf6', backgroundColor: '#8b5cf633',tension: 0.2, fill: true, yAxisID: 'y' },
+            { label: 'Network Speed (Mbps)', data: [], borderColor: '#f06e69', backgroundColor: '#f06e6933', tension: 0.2, fill: true, yAxisID: 'y1' }
         ]
     },
     options: { 
         responsive: true, maintainAspectRatio: false, 
+        plugins:{
+            legend:{
+                labels:{
+                    color: '#6b7280'
+                }
+            }
+        },
         scales: { 
-            y: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 100, title: { display: true, text: 'Utilization (%)', color: '#6b7280' } },
-            y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, title: { display: true, text: 'Network (Mbps)', color: '#f06e69' }, grid: { drawOnChartArea: false } } 
+            y: { 
+                type: 'linear', display: true, position: 'left', beginAtZero: true, max: 100, 
+                title: { display: true, text: 'Utilization (%)', color: '#43785c' },
+                ticks: { color: '#6b7280' },
+                grid: { color: '#e5e7eb' }
+            },
+            y1: { 
+                type: 'linear', display: true, position: 'right', beginAtZero: true, 
+                title: { display: true, text: 'Network (Mbps)', color: '#f06e69' },
+                ticks: { color: '#6b7280' }, 
+                grid: { drawOnChartArea: true, color: '#e5e7eb'} } 
         }
     }
 });
