@@ -33,7 +33,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ## Features
 
-- **Live Hardware Telemetry** — Real-time CPU, RAM, GPU, and network utilization tracked every 15 seconds and rendered as a live Chart.js line graph
+- **Live Hardware Telemetry** — Real-time CPU, RAM, GPU, and network utilization tracked every 5 seconds and rendered as a live Chart.js line graph
 - **Windows Event Log Parsing** — Reads System event logs via `wevtutil`, filters for critical Event IDs (Kernel 41, BSODs, driver crashes, thermal events), and deduplicates entries before persisting to SQLite
 - **AI-Powered Diagnostics** — Click any event log entry to request a deep root cause analysis from Gemini 2.5 Flash, structured as severity classification, cause explanation, and a step-by-step action plan
 - **Smart AI Caching** — Gemini responses are cached in `localStorage` so repeated lookups for the same event ID load instantly without burning API quota
