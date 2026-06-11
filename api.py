@@ -53,9 +53,12 @@ def background_sensor_loop():
         current_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
         current_time_now = time.time()
         time_diff = current_time_now - last_net_time
-        
-        # total number of bytes from last call to current call, convert from byte to bits, divide by 1 mill for Megabits divide by elapsed time
-        net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff if time_diff > 0 else 0.0
+
+        if time_diff > 0:
+            # total number of bytes from last call to current call, convert from byte to bits, divide by 1 mill for Megabits divide by elapsed time
+            net_mbps = ((current_net_bytes - last_net_bytes) * 8) / 1_000_000 / time_diff
+        else:
+            net_mbps = 0.0
        
         # log the current bytes and time, so that the API can receive the latest data instantly from fast cache
         last_net_bytes = current_net_bytes
@@ -75,10 +78,13 @@ def background_sensor_loop():
         # this asks the OS for a list of every running process
         for proc in psutil.process_iter(['name', 'memory_percent', 'cpu_percent']):
             try:
+                cpu = proc.cpu_percent(interval=None)
+                ram = proc.memory_percent()
+
                 processes_data.append({
-                    "name": proc.info['name'],
-                    "ram": round(proc.info['memory_percent'] or 0, 1),
-                    "cpu": round(proc.info['cpu_percent'] or 0, 1)
+                    "name": proc.info['name'] or "Unknown",
+                    "ram": round(ram if ram is not None else 0.0, 1),
+                    "cpu": round(cpu if cpu is not None else 0.0, 1)
                 })
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass

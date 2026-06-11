@@ -93,6 +93,9 @@ def event_log_scrapper():
                     )
                 conn.commit()
                 print("[Thread-2] Event Logs Updated")
+
+                # cleans up telemetry older than 7 days to prevent database bloat
+                cleanup_old_data()
             else:
                 print("[Thread-2] No critical errors found")
         except Exception as e:

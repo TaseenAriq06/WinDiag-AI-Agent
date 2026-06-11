@@ -299,19 +299,22 @@ async function fetchLiveTelemetry() {
         const processBox = document.getElementById('processList');
         processBox.innerHTML = ''; 
 
-        data.top_processes.forEach(proc => {
-            const row = `
-                <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <strong style="color: var(--text-main);">${proc.name}</strong>
-                    <span style="color: var(--text-muted);">
-                        <span style="color: #10b981; font-weight: bold;">${proc.ram}% RAM</span> | 
-                        <span style="color: #2563eb;">${proc.cpu}% CPU</span>
-                    </span>
-                </div>
-            `;
-            processBox.innerHTML += row;
-        });
-
+        if(data.top_processes.length == 0){
+            processBox.innerHTML = '<div style="color: var(--text-muted); text-align: center;">Loading processes...</div>';
+        } else {
+            data.top_processes.forEach(proc => {
+                const row = `
+                    <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                        <strong style="color: var(--text-main);">${proc.name}</strong>
+                        <span style="color: var(--text-muted);">
+                            <span style="color: #10b981; font-weight: bold;">${proc.ram}% RAM</span> | 
+                            <span style="color: #2563eb;">${proc.cpu}% CPU</span>
+                        </span>
+                    </div>
+                `;
+                processBox.innerHTML += row;
+            });
+        }
         const networkBox = document.getElementById('networkList');
         networkBox.innerHTML = ''; 
 
@@ -567,5 +570,5 @@ fetchLiveTelemetry();
 
 // a continuous loop that calls Python every 2 seconds to fetch KPI usages, and 15 seconds to grab data to update the live chart
 setInterval(fetchLiveFast, 2000)
-setInterval(fetchLiveTelemetry, 15000); 
+setInterval(fetchLiveTelemetry, 5000); 
 setInterval(checkSystemErrors, 10000);
