@@ -119,18 +119,21 @@ window.sortLogs = function(column) {
 };
 
 window.exportToCSV = function() {
+    // if there are no errors that match the current filter, then alert the user that there is nothing to export and exit
     if (filteredErrors.length === 0) {
         alert("No logs match your current filter. Nothing to export!");
         return;
     }
 
     const headers = ["Timestamp", "Event ID", "Severity", "Classification", "Provider", "Description"];
-    
+    // using .map to loop through the errors, take an item and change it into something different
     const csvRows = filteredErrors.map(err => {
         const date = new Date(err.timestamp).toLocaleString('en-US');
         
+        // treat everything inside the quotes as a block of text so it doesnt seperate into columns due to commas
         const escapeCSV = (str) => `"${String(str).replace(/"/g, '""')}"`;
         
+        // this will piece the error information all together into a single string of text
         return [
             escapeCSV(date),
             err.event_id,
@@ -140,23 +143,28 @@ window.exportToCSV = function() {
             escapeCSV(err.description)
         ].join(',');
     });
-
+    // this makes a readable string format of today's date
+    const today = new Date().toISOString().slice(0, 10);
+    // seperate headers into columns and uses spread operator to dump translated row strings out of the array 
     const csvContent = [headers.join(','), ...csvRows].join('\n');
+    // compresses the giant string of text into raw file format, generate a temp url that points to binary large object in memory
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    
-    const today = new Date().toISOString().slice(0, 10);
-    link.setAttribute('download', `System_Diagnostic_Report_${today}.csv`);
-    
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
 
+    // take a blank <a> anchor link tag and set href to fake url, hidden visibility with the name of the download csv file as well
+    const a = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `System_Diagnostic_Report_${today}.csv`,
+    });
+    a.style.display = 'none';
+
+    // forces the browser to download the file by inserting <a> into the HTML, then remove it to ensure garbage collection after clicked
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+// this function is responsible for the badge colors on the system error log tables 
 function getSeverityColors(severity) {
     if (severity === 'high') {
         return { bg: '#ef4444', text: '#ffffff', badgeBg: '#fee2e2', badgeText: '#b91c1c' }; 
@@ -171,7 +179,7 @@ function getSeverityColors(severity) {
 const isDarkTheme = document.body.classList.contains('dark-mode');
 const initTextColor = isDarkTheme ? '#94a3b8' : '#6b7280';
 const initGridColor = isDarkTheme ? '#334155' : '#e5e7eb';
-
+// searches for telemetryChart id and uses built in drawing methods to paint that canvas 
 const ctx = document.getElementById('telemetryChart').getContext('2d');
 const telemetryChart = new Chart(ctx, {
     type: 'line',
@@ -184,7 +192,7 @@ const telemetryChart = new Chart(ctx, {
             { label: 'Network Speed (Mbps)', data: [], borderColor: '#f06e69', backgroundColor: '#f06e6933', tension: 0.2, fill: true, yAxisID: 'y1' }
         ]
     },
-    options: { 
+    options: { // makes sure the chart is adjustable based on window size and stretch depending on CSS attributes
         responsive: true, maintainAspectRatio: false, 
         plugins:{
             legend:{
@@ -198,7 +206,7 @@ const telemetryChart = new Chart(ctx, {
                 ticks: { color: initTextColor },
                 grid: { color: initGridColor },
             },
-
+            // created a dual axis chart keeping lines readable without one y values overriding the other 
             y: { 
                 type: 'linear', display: true, position: 'left', beginAtZero: true, max: 100, 
                 title: { display: true, text: 'Utilization (%)', color: '#43785c' },
