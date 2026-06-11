@@ -74,34 +74,44 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 function filterLogs(resetPage = true) {
+    // finds your search bar and grabs what the user typed, make it strictly lowercase for easy searches
     const query = document.getElementById('searchInput').value.toLowerCase();
+    // finds the dropdown menu and and grabs the currently selected option
     const selectedSeverity = document.getElementById('severityFilter').value;
     
+    // this loops through all errors and checks if the user's value matches the log history anywhere
     filteredErrors = allErrors.filter(error => {
         const textMatch = error.title.toLowerCase().includes(query) ||
                           error.provider.toLowerCase().includes(query) ||
                           error.event_id.toString().includes(query);
+        // checks if the user selected all severities or a specific one, and return the true errors that match the text and severity
         const severityMatch = (selectedSeverity === 'all') || (error.severity === selectedSeverity);
         return textMatch && severityMatch;
     });
-    
+    // forces you to go back to page 1 after resetting the filter search
     if(resetPage == true){
         currentPage = 1;
     }
     renderTable();
 }
-
+// using window attaches this function to a global browser window that allows html to have direct access to clicking a column
 window.sortLogs = function(column) {
     if (currentSortColumn === column) {
+        // if the direction was forward (A-Z) it would be 1, multiplying by -1 reverses the order to (Z-A)
         sortDirection *= -1;
     } else {
         sortDirection = 1;
+        // user clicked a brand new column so reset the sorting back to forward and remember the new column to sort 
         currentSortColumn = column;
     }
     filteredErrors.sort((a, b) => {
+        // look inside each object a and b and pull out info that matches the column info 
         let valA = a[column];
         let valB = b[column];
+        // if valA is 50 and valB is 100, 50-100 = -50 meaning valA should have higher ranking than valB and multiply by sortDirection
         if (column === 'event_id') return (valA - valB) * sortDirection;
+
+        // compares word A to word B to return the actual sorting direction
         return valA.toString().localeCompare(valB.toString()) * sortDirection;
     });
     currentPage = 1; 
