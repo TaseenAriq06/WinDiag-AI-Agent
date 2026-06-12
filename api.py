@@ -75,9 +75,12 @@ def background_sensor_loop():
             FAST_CACHE["gpu"] = 0.0
         
         processes_data = []
+        total_cores = psutil.cpu_count()
         # this asks the OS for a list of every running process
         for proc in psutil.process_iter(['name', 'memory_percent', 'cpu_percent']):
             try:
+                raw_cpu = proc.cpu_percent(interval=None)
+                cpu = raw_cpu / total_cores if total_cores else 0.0
                 cpu = proc.cpu_percent(interval=None)
                 ram = proc.memory_percent()
 
