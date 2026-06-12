@@ -223,12 +223,13 @@ const telemetryChart = new Chart(ctx, {
 });
 
 async function fetchHealthSummary(){
+    // finds the div id, make it visible, and add a inner HTML text that waits for the info to be visible
     const summaryBox = document.getElementById('healthSummaryBox')
 
     summaryBox.style.display = 'block';
     summaryBox.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Analyzing 24-hour telemetry vault...</span>';
 
-    try {
+    try { // waits for the api response by fetching the data from the JSON file, 'no-store' forces Python to ask for new calculations
         const response = await fetch('http://127.0.0.1:8000/api/health-summary', { cache: 'no-store' });
         const data = await response.json()
 
@@ -260,11 +261,14 @@ async function fetchHealthSummary(){
 }
 
 async function loadChartHistory() {
-    try {
+    try { // loads the historical telemetry data from the API and populates the chart when the page first loads
         const response = await fetch('http://127.0.0.1:8000/api/history');
         const result = await response.json();
+
         result.telemetry.forEach(row => {
+            // extract just the time (HH:MM:SS) from the timestamp for cleaner x-axis labels
             const timeLabel = row.timestamp.slice(-8);
+            // push the historical telemetry data into the chart's datasets
             telemetryChart.data.labels.push(timeLabel);
             telemetryChart.data.datasets[0].data.push(row.cpu_percent);
             telemetryChart.data.datasets[1].data.push(row.ram_percent);
@@ -276,7 +280,7 @@ async function loadChartHistory() {
 }
 
 async function fetchLiveFast() {
-    try {
+    try { // lightweight API call that fetches most recent KPI usages for the top cards on the dashboard
         const response = await fetch('http://127.0.0.1:8000/api/live/fast', { cache: 'no-store' });
         const data = await response.json();
         document.getElementById('live-val-cpu').innerText = data.cpu.toFixed(1);
@@ -287,7 +291,7 @@ async function fetchLiveFast() {
 }
 
 async function fetchLiveTelemetry() {
-    try {
+    try { // more intensive API call that fetches telemetry along with top processes and network connections to update live chart
         const response = await fetch('http://127.0.0.1:8000/api/live', { cache: 'no-store' });
         const data = await response.json();
         
@@ -299,9 +303,11 @@ async function fetchLiveTelemetry() {
         const processBox = document.getElementById('processList');
         processBox.innerHTML = ''; 
 
+        // if the API is still calculating the top processes and returns an empty array, show a message instead of empty box
         if(data.top_processes.length == 0){
             processBox.innerHTML = '<div style="color: var(--text-muted); text-align: center;">Loading processes...</div>';
         } else {
+            // this updates the top processes section by looping through the API response and painting each process as a row
             data.top_processes.forEach(proc => {
                 const row = `
                     <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
@@ -320,7 +326,7 @@ async function fetchLiveTelemetry() {
 
         if (data.top_connections.length === 0) {
             networkBox.innerHTML = '<div style="color: var(--text-muted); padding: 8px;">No active connections found.</div>';
-        } else {
+        } else { // this updates the active network connection box through the API response to show the connection ip and port
             data.top_connections.forEach(conn => {
                 const row = `
                     <div style="display: flex; justify-content: space-between; background: var(--card-bg); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
@@ -333,13 +339,13 @@ async function fetchLiveTelemetry() {
                 networkBox.innerHTML += row;
             });
         }
-
+        // push the new usage information onto the chart after loading the previous 20 logs from history api
         telemetryChart.data.labels.push(data.timestamp);
         telemetryChart.data.datasets[0].data.push(data.cpu);
         telemetryChart.data.datasets[1].data.push(data.ram);
         telemetryChart.data.datasets[2].data.push(data.gpu);
         telemetryChart.data.datasets[3].data.push(data.wifi_mbps);
-        
+        // make sure the chart does not get bloated with 20+ logs so it updates continuously 
         if (telemetryChart.data.labels.length > 20) {
             telemetryChart.data.labels.shift();
             telemetryChart.data.datasets[0].data.shift();
@@ -352,19 +358,23 @@ async function fetchLiveTelemetry() {
 }
 
 window.openModal = function(globalIndex) {
+    // this allows us to pull up the correct error information when a user clicks on a log row
     const error = filteredErrors[globalIndex];
     if (!error) return;
-    
+    // save the currently active error to a global variable so that the AI analysis button can access it
     activeErrorForAI = error; 
     
     const aiBtn = document.getElementById('aiBtn');
     const responseContainer = document.getElementById('aiResponseContainer');
     const responseText = document.getElementById('aiResponseText');
 
+    // create a unique cache key for this specific error by combining event_id and provider, and sanitize the provider string to ensure it's safe for use as a key
     const safeProvider = String(error.provider).replace(/[^a-zA-Z0-9]/g, '_');
     const cacheKey = `gemini_cache_${error.event_id}_${safeProvider}`;
     const cachedAnalysis = localStorage.getItem(cacheKey);
 
+    // if there is cached analysis for this error, display it immediately and disable the AI button to prevent redundant API calls. 
+    // otherwise, prepare the modal for a new analysis
     if (cachedAnalysis) {
         responseContainer.style.display = 'block';
         responseText.innerHTML = marked.parse(cachedAnalysis);
@@ -376,11 +386,13 @@ window.openModal = function(globalIndex) {
         aiBtn.disabled = false;
         aiBtn.innerText = 'Analyze with Gemini AI';
     }
-
+    // this takes the raw timestamp from the API and converts it into a readable format for the modal display
+    // also gets the appropriate badge colors based on severity
     const rowDate = new Date(error.timestamp);
     const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
     const colors = getSeverityColors(error.severity);
 
+    // fills all missing info in the modal with the error information from the API
     document.getElementById('modalTitle').innerText = error.title;
     document.getElementById('modalEventId').innerText = error.event_id;
     document.getElementById('modalEventId').style.backgroundColor = colors.badgeBg;
@@ -392,7 +404,7 @@ window.openModal = function(globalIndex) {
 
     document.getElementById('logModal').style.display = 'block';
 }
-
+// this function allows the user to click outside the modal or on the close button to exit the modal and return to the dashboard
 window.closeModal = function(event) {
     if (!event || event.target.className === 'modal-overlay') {
         document.getElementById('logModal').style.display = 'none';

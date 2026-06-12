@@ -19,7 +19,7 @@
     --table-header-bg: #0f172a;
     --table-hover: #334155;
     --btn-bg: #8b6060;
-    --btn-hover: #b91c1c;
+    --btn-hover: #bf5252;
 }
 
 /* global styles to initialize the entire screen and sections*/
@@ -113,4 +113,20 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 #severityFilter option[value="all"]{
     color: var(--text-main);
     font-weight: bold;
+}
+#aiBtn{
+    background-color: #9177C7;
+    display: block;
+    margin: 0 auto;
+}
+#aiBtn:hover:not(:disabled){
+    background-color: #7a62a8;
+    box-shadow: 0 0 8px rgba(145, 119, 199, 0.6);
+}
+#csvBtn{
+    background-color: #58ad67;
+}
+#csvBtn:hover:not(:disabled){
+    background-color: #377b3f;
+    box-shadow: 0 0 8px rgba(145, 119, 199, 0.6);
 }

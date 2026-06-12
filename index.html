@@ -10,7 +10,7 @@
 </head>
 <body>
     <div class="container" style="position: relative;">
-        <button id="themeToggle" class="btn" style="position: absolute; top: 130px; right: 25px; background-color: var(--btn-bg); display: flex; align-items: center;">
+        <button id="themeToggle" class="btn" style="position: absolute; top: 130px; right: 25px; display: flex; align-items: center;">
             Dark Mode
         </button>
         <!--pop-up window that appears when you click a system log event-->
@@ -18,7 +18,7 @@
             <div class="modal-content" onclick="event.stopPropagation()">
                 <div class="modal-header">
                     <h3 id="modalTitle" style="margin: 0;">Error Title</h3>
-                    <button class="close-btn" onclick="closeModal()">×</button>
+                    <button class="close-btn" onclick="closeModal()">X</button>
                 </div>
                 <div class="modal-body">
                     <p style="margin-top: 0;"><strong>Event ID:</strong> <span id="modalEventId" class="badge"></span></p>
@@ -35,8 +35,8 @@
                     </div>
                     
                     <div style="border-top: 1px dashed var(--border-color); padding-top: 15px;">
-                        <button id="aiBtn" class="btn" style="background-color: #9177C7; width: 100%; transition: 0.2s;" onclick="askGemini()">
-                            Ask AI For Recommendation
+                        <button id="aiBtn" class="btn" style="width: 65%; transition: 0.2s; font-size: 1.3em; font-family:'Trebuchet MS', sans-serif;" onclick="askGemini()">
+                            Analyze with Gemini AI
                         </button>
                         
                         <div id="aiResponseContainer" style="display: none; background: var(--table-header-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; margin-top: 15px;">
@@ -65,8 +65,8 @@
                 <div class="spec-item"><div class="spec-label">Primary Drive Storage</div><div class="spec-value" id="spec-disk" style="font-size: 1.1em;">Loading...</div></div>
                 <div class="spec-item"><div class="spec-label">System Uptime</div><div class="spec-value" id="spec-uptime">Loading...</div></div>
                 
-                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed var(--border-color);">
-                    <button class="btn" style="width: 100%; background-color: var(--btn-bg); margin-bottom: 10px;" onclick="fetchHealthSummary()">
+                <div style="margin-top: 25px; padding-top: 15px; display: flex; flex-direction: column; gap: 10px; padding: 0px;">
+                    <button class="btn" style="width: 100%; margin-bottom: 10px; font-size: 1.1em; font-family:'Times New Roman', serif;" onclick="fetchHealthSummary()">
                         24 HR HEALTH SUMMARY
                     </button>
                     <div id="healthSummaryBox" style="display: none; font-size: 0.95em; background: var(--table-header-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
@@ -109,7 +109,7 @@
             <div class="table-header-row">
                 <h3 style="margin: 0;">System Event History (Last 30 Days)</h3>
                 <div class="filter-group">
-                    <button class="btn" style="background-color: #46ac64; display: flex; align-items: center; gap: 5px;" onclick="exportToCSV()">
+                    <button id="csvBtn" class="btn" style="display: flex; align-items: center; gap: 5px;" onclick="exportToCSV()">
                         📥 Export CSV
                     </button>
                     <!--show the options of what to filter the system logs based on severity of the error-->
