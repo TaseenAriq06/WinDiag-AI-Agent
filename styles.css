@@ -51,6 +51,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .btn { background-color: var(--btn-bg); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
 .btn:hover:not(:disabled) { background-color: var(--btn-hover); }
 .btn:disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.7; }
+.social-btn {background-color: var(--base);}
+.social-btn:hover:not(:disabled) {background-color: var(--hover);}
 
 .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; transition: border-color 0.2s; background: var(--card-bg); color: var(--text-main); }
 .search-bar:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
@@ -128,5 +130,17 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 }
 #csvBtn:hover:not(:disabled){
     background-color: #377b3f;
-    box-shadow: 0 0 8px rgba(145, 119, 199, 0.6);
+    box-shadow: 0 0 8px rgba(88, 173, 103, 0.6);
+}
+#linkedinBtn{
+    background-color: #0A66C2;
+}
+#linkedinBtn:hover:not(:disabled){
+    background-color: #004182;
+}
+#githubBtn{
+    background-color: #24292e;
+}
+#githubBtn:hover:not(:disabled){
+    background-color: #57606a;
 }
