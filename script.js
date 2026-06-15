@@ -417,7 +417,7 @@ window.closeModal = function(event) {
         document.getElementById('logModal').style.display = 'none';
     }
 }
-
+// make a network request and runs a safety check so function doesnt crash if reading empty data 
 window.askGemini = async function() {
     if (!activeErrorForAI) return;
 
@@ -425,14 +425,17 @@ window.askGemini = async function() {
     const responseContainer = document.getElementById('aiResponseContainer');
     const responseText = document.getElementById('aiResponseText');
 
+    // generates a cache key so it knows where to save the new analysis for when the AI finishes
     const safeProvider = String(activeErrorForAI.provider).replace(/[^a-zA-Z0-9]/g, '_');
     const cacheKey = `gemini_cache_${activeErrorForAI.event_id}_${safeProvider}`;
 
+    // lock the button so user cant spam requests, changes into loading button, displays a message to show AI is thinking
     aiBtn.disabled = true;
     aiBtn.innerText = 'Consulting Kernel Experts (Loading)...';
     responseContainer.style.display = 'block';
     responseText.innerHTML = '<em>Analyzing logs and checking system components...</em>';
 
+    // fetch AI response from API endpoint, with POST method to send information to process formatted as a JSON object shipping to Python
     try {
         const response = await fetch('http://127.0.0.1:8000/api/analyze-error', {
             method: 'POST',
@@ -445,7 +448,7 @@ window.askGemini = async function() {
             })
         });
         const data = await response.json();
-        
+        // makes sure if python returned successful status code, saves answer to localstorage with cachekey, turns raw markdown into HTML
         if (response.ok) { 
             localStorage.setItem(cacheKey, data.analysis);
             responseText.innerHTML = marked.parse(data.analysis);
@@ -455,6 +458,7 @@ window.askGemini = async function() {
             aiBtn.disabled = false;
             aiBtn.innerText = '❌ Try Again';
         }
+        // if fetch fails completely jumps to this catch block and replies with a failure error message
     } catch (error) { 
         console.error("AI API Error:", error);
         responseText.innerHTML = '<span style="color: red;">Failed to connect to local server endpoint. Make sure the API is running.</span>';
