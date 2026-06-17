@@ -469,7 +469,7 @@ window.askGemini = async function() {
 
 function renderTable() {
     const tableBody = document.getElementById('logTableBody');
-    tableBody.innerHTML = ''; 
+    tableBody.innerHTML = ''; // cleans the table before rendering table with new info to prevent duplicates
     
     if (filteredErrors.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No system logs match your filters.</td></tr>`;
@@ -479,21 +479,24 @@ function renderTable() {
         document.getElementById('nextBtn').disabled = true;
         return;
     }
-    
+    // rounds up to the higher quotient to display a even number of logs per page 
     const totalPages = Math.ceil(filteredErrors.length / rowsPerPage);
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
-
+    // makes sure it starts at its corresponding index every page like page 2 should start at index 10 (2-1)*10
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
+    // takes massive array of data and cuts it to 10 logs per page on the screen
     const currentErrors = filteredErrors.slice(startIndex, endIndex);
 
     currentErrors.forEach((error, index) => {
+        // if you click a row, it needs to know which log it needs to open a modal for 
         const globalIndex = startIndex + index; 
+
         const rowDate = new Date(error.timestamp);
-        const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+        const cleanRowTime = rowDate.toLocaleString('en-US', { month: 'short', weekday: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
         const rowColors = getSeverityColors(error.severity);
-        
+        // template literal to inject javascript variables in raw html for each row 
         const row = `
             <tr class="clickable-row" onclick="openModal(${globalIndex})">
                 <td style="white-space: nowrap;">${cleanRowTime}</td>
@@ -513,7 +516,7 @@ function renderTable() {
     document.getElementById('pageInput').value = currentPage;
     document.getElementById('pageInput').max = totalPages;
     document.getElementById('pageIndicator').innerText = `of ${totalPages}`;
-    document.getElementById('prevBtn').disabled = (currentPage === 1);
+    document.getElementById('prevBtn').disabled = (currentPage === 1); // cant go backwards if you are already on page 1
     document.getElementById('nextBtn').disabled = (currentPage === totalPages);
 }
 
@@ -524,11 +527,11 @@ window.changePage = function(direction) {
 
 window.goToPage = function() {
     const pageInput = document.getElementById('pageInput');
-    let targetPage = parseInt(pageInput.value);
-    const totalPages = Math.ceil(filteredErrors.length / rowsPerPage) || 1;
-    
+    let targetPage = parseInt(pageInput.value); // make whatever value the user enters into a integer
+    const totalPages = Math.ceil(filteredErrors.length / rowsPerPage) || 1; // calculates max number of pages or page 1 if there is no errors
+    // forces user to only be able to type numbers and not characters
     if (isNaN(targetPage) || targetPage < 1) targetPage = 1;
-    else if (targetPage > totalPages) targetPage = totalPages;
+    else if (targetPage > totalPages) targetPage = totalPages; // if user number higher than total pages, return last page
     
     currentPage = targetPage;
     renderTable();
@@ -553,25 +556,50 @@ async function checkSystemErrors() {
 
 let systemBootTime = 0
 
+function updateResourceColors(rawString, elementId){
+     // this is to split the string to extract numbers for percentage calculation
+    const parts = rawString.split(' / ');
+    const usedStr = parts[0];
+    const totalStr = parts[1];
+
+    // uses parseFloat to extract the numbers from the strings
+    const usedNum = parseFloat(usedStr);
+    const totalNum = parseFloat(totalStr);
+    
+    // calculate percentage of ram to determine severity
+    const percentage = (usedNum / totalNum) * 100;
+
+    let severityClass = "status-safe";
+    if (percentage >= 90) {
+        severityClass = "status-critical";
+    } else if (percentage >= 75) {
+        severityClass = "status-warning";
+    }
+
+    document.getElementById(elementId).innerHTML = `<span class="${severityClass}">${usedStr}</span> / ${totalStr}`;
+}
+
 // fetch system specifications and display in the left panel, async so it doesn't block the initial page load
 async function fetchSystemSpecs() {
     try {
         const response = await fetch('http://127.0.0.1:8000/api/system-specs');
         const specs = await response.json();
+
         // overrides the specs with real spec info from the API response
         document.getElementById('spec-os').innerText = specs.os;
         document.getElementById('spec-cpu').innerText = specs.cpu;
         document.getElementById('spec-gpu').innerText = specs.gpu;
         document.getElementById('spec-cores').innerText = specs.cores;
-        document.getElementById('spec-ram').innerText = specs.ram;
-        document.getElementById('spec-disk').innerText = specs.disk;
-        
+
+        updateResourceColors(specs.ram, 'spec-ram');
+        updateResourceColors(specs.disk, 'spec-disk');
+
         systemBootTime = specs.boot_time;
     } catch (error){ 
         console.error("Error fetching system specs:", error); 
     }
 }
-
+// actively runs how long the system has been on for
 function updateUptime() {
     if (systemBootTime === 0) return;
     const now = Date.now() / 1000; 
@@ -591,7 +619,7 @@ fetchSystemSpecs();
 checkSystemErrors();
 fetchLiveTelemetry(); 
 
-// a continuous loop that calls Python every 2 seconds to fetch KPI usages, and 15 seconds to grab data to update the live chart
+// a continuous loop that calls Python every 2 seconds to fetch KPI usages, and 5 seconds to grab data to update the live chart
 setInterval(fetchLiveFast, 2000)
 setInterval(fetchLiveTelemetry, 5000); 
 setInterval(checkSystemErrors, 10000);

@@ -35,6 +35,9 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .spec-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); text-align: center;}
 .spec-label { font-size: 0.85em; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
 .spec-value { font-size: 1.1em; color: var(--text-main); margin-top: 4px; }
+.status-safe { color: #22c55e; font-weight: bold; }
+.status-warning { color: #eab308; font-weight: bold; }
+.status-critical { color: #ef4444; font-weight: bold; }
 
 /* styles for the right panel with logs and details */
 .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; table-layout: auto; }
