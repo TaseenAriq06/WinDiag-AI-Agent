@@ -6,7 +6,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ---
 
-### Live Hardware Telemetry & System Specs
+<h1 align="center">Live Hardware Telemetry & System Specs</h1>
 <img src="assets/dashboard_telemetry5.jpg" width="100%"/>
 
 <p align="center">
@@ -31,7 +31,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ---
 
-## Features
+<h1 align="center">Features</h1>
 
 - **Live Hardware Telemetry** — Real-time CPU, RAM, GPU, and network utilization tracked every 5 seconds and rendered as a live Chart.js line graph
 - **Windows Event Log Parsing** — Reads System event logs via `wevtutil`, filters for critical Event IDs (Kernel 41, BSODs, driver crashes, thermal events), and deduplicates entries before persisting to SQLite
@@ -47,7 +47,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
   </p>
 ---
 
-## Architecture
+<h1 align="center">Architecture</h1>
 
 ```
 					┌─────────────────────────────────────────────────────────┐
@@ -96,7 +96,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ---
 
-## Tech Stack
+<h1 align="center">Tech Stack</h1>
 
 | Layer | Technology | Purpose |
 |---|---|---|
@@ -112,7 +112,7 @@ A locally-hosted, AI-powered Windows system telemetry and diagnostic platform bu
 
 ---
 
-## Project Structure
+<h1 align="center">Project Structure</h1>
 
 ```
 WinDiag-AI-Agent/
@@ -133,7 +133,7 @@ WinDiag-AI-Agent/
 
 ---
 
-## Prerequisites
+<h1 align="center">Prerequisites</h1>
 
 - **OS:** Windows 10 or Windows 11 (required — uses Windows-only APIs)
 - **Python:** 3.12.x ([download](https://www.python.org/downloads/release/python-3120/))
@@ -143,7 +143,7 @@ WinDiag-AI-Agent/
 
 ---
 
-## Installation
+<h1 align="center">Installation</h1>
 
 **1. Clone the repository**
 
@@ -198,7 +198,7 @@ Or set it permanently in Windows → System Properties → Environment Variables
 
 ---
 
-## Running the Project
+<h1 align="center">Running The Project</h1>
 
 **Option A — Manual (development)**
 
@@ -222,7 +222,7 @@ Double-click `start_all.bat`. This runs the agent once and starts the API server
 
 ---
 
-## Automated Startup
+<h1 align="center">Automated Startup</h1>
 
 To have WinDiag launch silently every time you log into Windows:
 
@@ -239,7 +239,7 @@ You should see: `{"message": "Diagnostic API Server is Online"}`
 
 ---
 
-## API Reference
+<h1 align="center">API Reference</h1>
 
 All endpoints are served at `http://127.0.0.1:8000`
 
@@ -264,7 +264,7 @@ All endpoints are served at `http://127.0.0.1:8000`
 ```
 ---
 
-## Known Limitations
+<h1 align="center">Known Limitations</h1>
 
 - **Windows only** — `wevtutil`, `win32evtlog`, and PowerShell GPU counters are Windows-specific APIs. This project will not run on macOS or Linux.
 - **Admin privileges** — Some Event Log entries and network socket data may be hidden without running as Administrator.
