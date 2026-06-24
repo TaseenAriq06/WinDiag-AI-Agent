@@ -81,10 +81,14 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 function filterLogs(resetPage = true) {
+    const select = document.getElementById('severityFilter');
     // finds your search bar and grabs what the user typed, make it strictly lowercase for easy searches
     const query = document.getElementById('searchInput').value.toLowerCase();
     // finds the dropdown menu and and grabs the currently selected option
-    const selectedSeverity = document.getElementById('severityFilter').value;
+    const selectedSeverity = select.value;
+    // clear old color classes and apply new one
+    select.classList.remove('selected-all', 'selected-high', 'selected-medium', 'selected-low');
+    select.classList.add(`selected-${selectedSeverity}`);
     
     // this loops through all errors and checks if the user's value matches the log history anywhere
     filteredErrors = allErrors.filter(error => {
