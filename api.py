@@ -159,13 +159,12 @@ def get_errors():
 
         # creating a new dictionary for each error by combining raw data and metadata
         translated_errors.append({
-            "event_id": row["event_id"],
+            "event_id": event_id,
             "timestamp": row["timestamp"],
             "provider": row["provider"],
             "title": f"System Event {row['event_id']}",
             "description": row["description"],
-            "action": "Select 'Analyze with Gemini AI' for a full breakdown",
-            "severity": "high" if row ["event_id"] in [41, 1001] else "medium" 
+            "action": "Select 'Analyze with Gemini AI' for a full breakdown"
         })
     return {"count": len(translated_errors), "errors": translated_errors}
 
