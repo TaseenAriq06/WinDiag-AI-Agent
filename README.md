@@ -1,4 +1,4 @@
-# WinDiag AI Agent
+<h1 align="center">Windows Diagnostic AI Agent</h1>
 
 A locally-hosted, AI-powered Windows system telemetry and diagnostic platform built with Python, FastAPI, and Vanilla JS. WinDiag runs silently in the background on every boot, collects hardware metrics and Windows Event Log data, and serves everything through a REST API to a live dashboard — with Google Gemini AI generating plain-language root cause analysis for kernel failures and system crashes.
 
