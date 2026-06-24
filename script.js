@@ -186,6 +186,34 @@ function getSeverityColors(severity) {
     }
 }
 
+function assignCorrectSeverity(eventId, provider, title) {
+    const textToSearch = `${provider} ${title}`.toLowerCase();
+    // to assign the correct severity, it checks through each of those keywords to see if it exists in the title and provider
+    const highKeywords = [
+        'fatal', 'kernel', 'bugcheck', 'corrupt', 'failure', 'failed', 
+        'denied', 'unhandled', 'bluescreen', 'deadlock', 'terminated unexpectedly',
+        'security service', 'hardware error'
+    ];
+    // if the word does exist, return the severity as a critical one
+    if (highKeywords.some(keyword => textToSearch.includes(keyword))) {return 'high';}
+
+    const mediumKeywords = [
+        'timeout', 'timed out', 'warning', 'unable to start', 'could not connect',
+        'retry', 'deprecate', 'unexpected shutdown', 'service control'
+    ];
+
+    if (mediumKeywords.some(keyword => textToSearch.includes(keyword))) {return 'medium';}
+
+    const lowKeywords = [
+        'success', 'information', 'started', 'initialized', 'dcom', 
+        'distributedcom', 'successfully', 'running'
+    ];
+
+    if (lowKeywords.some(keyword => textToSearch.includes(keyword))) {return 'low';}
+
+    return 'low';
+}
+
 // check the theme of the dashboard and set initial chart text/grid colors accordingly
 const isDarkTheme = document.body.classList.contains('dark-mode');
 const initTextColor = isDarkTheme ? '#94a3b8' : '#6b7280';
@@ -543,12 +571,22 @@ window.goToPage = function() {
 
 async function checkSystemErrors() {
     try {
+        // fetches data from this api endpoint and ignore saved cache and translate it into json as a result
         const response = await fetch('http://127.0.0.1:8000/api/errors', { cache: 'no-store' });
         const result = await response.json();
         
+        // if the server found any errors, loop through the array of error objects 
         if (result.count > 0) {
-            allErrors = result.errors;
-            filterLogs(false); 
+            allErrors = result.errors.map(error => {
+                return {
+                    // uses the spread operator to take existing info and unpack it into a new object to not lose data
+                    ...error,
+                    // calculates how critical the severity is and overwrites it for that specific log
+                    severity: assignCorrectSeverity(error.event_id, error.provider)
+                };
+            });
+            // apply any active filters to rebuild the table
+            filterLogs(false);
         } else {
             allErrors = [];
             filterLogs(false);

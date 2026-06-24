@@ -103,14 +103,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 }
 
 /* styles for the severity filter dropdown */
-#severityFilter option[value="high"]{color: #eb7070;}
-#severityFilter option[value="medium"]{color: #de8546; }
-#severityFilter option[value="low"]{color: #d3f24b; }
+#severityFilter option[value="high"]{color: #ef4444;}
+#severityFilter option[value="medium"]{color: #f97316; }
+#severityFilter option[value="low"]{color: #eab308; }
 #severityFilter option[value="all"]{color: var(--text-main);  }
 
-#severityFilter.selected-high { color: #eb7070;  }
-#severityFilter.selected-medium { color: #de8546;  }
-#severityFilter.selected-low { color: #d3f24b;  }
+#severityFilter.selected-high { color: #ef4444;  }
+#severityFilter.selected-medium { color: #f97316;  }
+#severityFilter.selected-low { color: #eab308;  }
 #severityFilter.selected-all { color: var(--text-main);  }
 
 #aiBtn{background-color: #9177C7; display: block; margin: 0 auto;}

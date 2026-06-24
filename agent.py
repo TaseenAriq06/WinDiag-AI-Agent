@@ -66,7 +66,9 @@ def event_log_scrapper():
                 next(csv_reader, None) # skip the header row of the CSV output since it just contains column names 
 
                 # ignore typical Windows events that are not useful for diagnostics, preventing bloating the database
-                IGNORED_IDS = {'10016', '1108', '1014', '10010'}
+                IGNORED_IDS = {'10016', '1108', '1014', '10010', '10005', '7031', '7032', '10002', '219', '5061'}
+                # forces system to save the event id if it contains one of these danger words in the description
+                DANGER_WORDS = ['fatal', 'hardware', 'bugcheck', 'corrupt']
 
                 # assign 4 variables to the 4 columns of the CSV output, and insert those values into the system_events table 
                 for row in csv_reader:
@@ -78,7 +80,11 @@ def event_log_scrapper():
                     description = row[3]
                     
                     if event_id in IGNORED_IDS:
-                        continue
+                        # convert event description into lowercase for easy key word retrieval
+                        desc_lower = description.lower()
+                        # if the danger word does not exist in the description, continue and ignore the event id
+                        if not any(word in desc_lower for word in DANGER_WORDS):
+                            continue
 
                     # this select statement makes sure that we don't insert duplicate system events into the database
                     cursor.execute(
