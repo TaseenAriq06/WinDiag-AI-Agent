@@ -34,7 +34,7 @@ themeToggleBtn.addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
 
     if(document.body.classList.contains('dark-mode')){
-        themeToggleBtn.innerHTML = sunIcon + 'Light Mode';
+        themeToggleBtn.innerHTML = Icons.sun + ' Light Mode';
         localStorage.setItem('theme', 'dark');
         
         // change chart text to light gray and repaint if in dark mode
@@ -56,7 +56,7 @@ themeToggleBtn.addEventListener('click', () => {
             telemetryChart.update();
         }
     } else {
-        themeToggleBtn.innerHTML = moonIcon + 'Dark Mode';
+        themeToggleBtn.innerHTML = Icons.moon + ' Dark Mode';
         localStorage.setItem('theme', 'light');
 
         // change chart text to dark gray and repaint
@@ -186,30 +186,55 @@ function getSeverityColors(severity) {
     }
 }
 
-function assignCorrectSeverity(eventId, provider, title) {
-    const textToSearch = `${provider} ${title}`.toLowerCase();
-    // to assign the correct severity, it checks through each of those keywords to see if it exists in the title and provider
-    const highKeywords = [
-        'fatal', 'kernel', 'bugcheck', 'corrupt', 'failure', 'failed', 
-        'denied', 'unhandled', 'bluescreen', 'deadlock', 'terminated unexpectedly',
-        'security service', 'hardware error'
-    ];
-    // if the word does exist, return the severity as a critical one
-    if (highKeywords.some(keyword => textToSearch.includes(keyword))) {return 'high';}
+function assignCorrectSeverity(eventId, provider, description) {
+    const id = Number(eventId);
+    const providerText = String(provider || '').toLowerCase();
+    const descriptionText = String(description || '').toLowerCase();
 
+    // conservative rules for events that need attention
+    const isKernelPowerFailure =
+        id === 41 && providerText.includes('kernel-power');
+
+    const isBugcheck =
+        descriptionText.includes('bugcheck') ||
+        descriptionText.includes('blue screen');
+
+    const isFatalHardwareError =
+        descriptionText.includes('fatal hardware error') ||
+        (
+            providerText.includes('whea-logger') &&
+            descriptionText.includes('fatal')
+        );
+
+    const isFileSystemCorruption =
+        descriptionText.includes('file system corruption') ||
+        descriptionText.includes('disk corruption');
+
+    if (
+        isKernelPowerFailure ||
+        isBugcheck ||
+        isFatalHardwareError ||
+        isFileSystemCorruption
+    ) {
+        return 'high';
+    }
+
+    // operational errors that deserve review but are not system-critical
     const mediumKeywords = [
-        'timeout', 'timed out', 'warning', 'unable to start', 'could not connect',
-        'retry', 'deprecate', 'unexpected shutdown', 'service control'
+        'terminated unexpectedly',
+        'failed',
+        'failure',
+        'denied',
+        'timeout',
+        'timed out',
+        'unable to start',
+        'could not connect',
+        'unexpected shutdown'
     ];
 
-    if (mediumKeywords.some(keyword => textToSearch.includes(keyword))) {return 'medium';}
-
-    const lowKeywords = [
-        'success', 'information', 'started', 'initialized', 'dcom', 
-        'distributedcom', 'successfully', 'running'
-    ];
-
-    if (lowKeywords.some(keyword => textToSearch.includes(keyword))) {return 'low';}
+    if (mediumKeywords.some(keyword => descriptionText.includes(keyword))) {
+        return 'medium';
+    }
 
     return 'low';
 }
@@ -286,10 +311,10 @@ async function fetchHealthSummary(){
                 <span style="color: var(--text-muted);">Peak RAM %:</span> <strong style="color: var(--text-main);">${data.peak_ram}%</strong>
             </div>
             <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
-                <span style="color: var(--text-muted);">Time >80% CPU:</span> <strong style="color: var(--text-main);">${data.high_cpu_seconds} sec</strong>
+                <span style="color: var(--text-muted);">Samples >80% CPU:</span> <strong style="color: var(--text-main);">${data.high_cpu_samples}</strong>
             </div>
             <div style="padding-top: 8px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between;">
-                <span style="color: var(--text-muted);">Critical Errors:</span> 
+                <span style="color: var(--text-muted);">System Errors:</span> 
                 <strong style="color: ${data.critical_events_24h > 0 ? '#ef4444' : '#10b981'};">${data.critical_events_24h}</strong>
             </div>
         `;
@@ -396,6 +421,16 @@ async function fetchLiveTelemetry() {
     } catch (error) { console.error("Error fetching live data:", error); }
 }
 
+function renderSafeMarkdown(markdown) {
+    const html = marked.parse(String(markdown));
+
+    if (typeof DOMPurify === 'undefined') {
+        console.error('DOMPurify failed to load.');
+        return '';
+    }
+    return DOMPurify.sanitize(html);
+}
+
 window.openModal = function(globalIndex) {
     // this allows us to pull up the correct error information when a user clicks on a log row
     const error = filteredErrors[globalIndex];
@@ -416,7 +451,7 @@ window.openModal = function(globalIndex) {
     // otherwise, prepare the modal for a new analysis
     if (cachedAnalysis) {
         responseContainer.style.display = 'block';
-        responseText.innerHTML = marked.parse(cachedAnalysis);
+        responseText.innerHTML = renderSafeMarkdown(cachedAnalysis);
         aiBtn.innerText = 'Analysis Loaded from Memory';
         aiBtn.disabled = true; 
     } else {
@@ -483,7 +518,7 @@ window.askGemini = async function() {
         // makes sure if python returned successful status code, saves answer to localstorage with cachekey, turns raw markdown into HTML
         if (response.ok) { 
             localStorage.setItem(cacheKey, data.analysis);
-            responseText.innerHTML = marked.parse(data.analysis);
+            responseText.innerHTML = renderSafeMarkdown(data.analysis);
             aiBtn.innerText = 'Analysis Complete';
         } else { 
             responseText.innerHTML = `<span style="color: red;">Error: ${data.detail || 'Failed to generate analysis.'}</span>`;
@@ -582,7 +617,11 @@ async function checkSystemErrors() {
                     // uses the spread operator to take existing info and unpack it into a new object to not lose data
                     ...error,
                     // calculates how critical the severity is and overwrites it for that specific log
-                    severity: assignCorrectSeverity(error.event_id, error.provider)
+                    severity: assignCorrectSeverity(
+                        error.event_id,
+                        error.provider,
+                        error.description
+                    )
                 };
             });
             // apply any active filters to rebuild the table

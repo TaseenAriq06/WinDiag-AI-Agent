@@ -9,6 +9,7 @@ import csv
 import io
 
 def setup_database():
+    conn = None
     try:
         # creates a file diagnostic.db in the same directory as the script
         conn = sqlite3.connect('diagnostic.db')
@@ -36,16 +37,22 @@ def setup_database():
             description TEXT
         )
         """)
+        cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_system_events_event_timestamp
+            ON system_events(event_id, timestamp)
+        """)
         # commits current transaction to the database so it can save to a file and not stay in your RAM
         conn.commit()
     finally:
-        if conn: conn.close()
+        if conn is not None:
+            conn.close()
 
 def event_log_scrapper():
     while True:
         conn = None
         try:
-            print("\n[Thread-2] --- Fetching Critical Errors ---")
+            print("\n[Thread-2] --- Fetching System Errors ---")
             conn = sqlite3.connect('diagnostic.db')
             cursor = conn.cursor()
             
@@ -57,8 +64,13 @@ def event_log_scrapper():
                 ps_cmd,
                 shell=True, # tells Python to open a PowerShell to run the command
                 text=True,  # tells Python to treat the command as readable text
-                capture_output=True # grabs the data and saves it into a result variable for the script to read it internally
+                capture_output=True, # grabs the data and saves it into a result variable for the script to read it internally
+                timeout=30  # sets a timeout of 30 seconds for the command to complete, preventing the script from hanging indefinitely
             )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    result.stderr.strip() or "PowerShell event collection failed."
+                )
             # wraps the raw data from the OS and normalizes it into a format thats easy to read in one XML file
             if result.stdout.strip():
                 # turns raw CSV output into a format that can be iterable over in Python, and extract specific fields for each error event
@@ -85,16 +97,13 @@ def event_log_scrapper():
                         # if the danger word does not exist in the description, continue and ignore the event id
                         if not any(word in desc_lower for word in DANGER_WORDS):
                             continue
-
-                    # this select statement makes sure that we don't insert duplicate system events into the database
-                    cursor.execute(
-                        "SELECT 1 FROM system_events WHERE event_id = ? AND timestamp = ?",
-                        (int(event_id), timestamp)
-                    )
                     # check if the record exists before inserting another system_event log, prevents duplicate bloating in database (Idempotency)
-                    if cursor.fetchone() is None:
-                        cursor.execute(
-                        "INSERT INTO system_events (event_id, timestamp, provider, description) VALUES (?, ?, ?, ?)",
+                    cursor.execute(
+                        """
+                        INSERT OR IGNORE INTO system_events
+                            (event_id, timestamp, provider, description)
+                        VALUES (?, ?, ?, ?)
+                        """,
                         (int(event_id), timestamp, provider, description)
                     )
                 conn.commit()
@@ -103,7 +112,7 @@ def event_log_scrapper():
                 # cleans up telemetry older than 7 days to prevent database bloat
                 cleanup_old_data()
             else:
-                print("[Thread-2] No critical errors found")
+                print("[Thread-2] No system errors found")
         except Exception as e:
             print(f"[Thread-2] Error in scrapper: {e}")
         finally:
@@ -142,12 +151,19 @@ def telemetry_loop():
             if conn: conn.close()
 
 def cleanup_old_data():
-    conn = sqlite3.connect('diagnostic.db')
-    cursor = conn.cursor()
-    # delete telemetry data older than 7 days 
-    cursor.execute("DELETE FROM telemetry WHERE timestamp < datetime('now', '-7 days')")
-    conn.commit()
-    if conn: conn.close()
+    conn = None
+    try:
+        conn = sqlite3.connect("diagnostic.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            # delete telemetry older than 7 days
+            "DELETE FROM telemetry "
+            "WHERE timestamp < datetime('now', '-7 days')"
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 # the moment the script runs, it starts a separate thread that runs the event_log_scrapper function in the background
 # while the main thread runs the telemetry_loop function, allowing both to operate simultaneously without blocking each other

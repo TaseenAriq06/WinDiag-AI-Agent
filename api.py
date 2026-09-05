@@ -34,10 +34,12 @@ app.add_middleware(
     allow_headers = ["*"]
 )
 # this try/except block reaches out to Google Servers to check for Gemini API key to set up a connection without crashing program
+client = None
+
 try:
     client = genai.Client()
 except Exception as e:
-    print(f"Warning: Gemini Client failed to initialize. Error {e}")
+    print(f"Warning: Gemini client failed to initialize: {e}")
 
 # save the total bytes sent/received at the exact moment the server starts, and the current time
 FAST_CACHE = {"gpu": 0.0, "net_mbps": 0.00, "top_processes": []}
@@ -48,9 +50,21 @@ def background_sensor_loop():
     """Runs continuously in the API background, calculating slow metrics without blocking the server."""
     global last_net_bytes, last_net_time
 
+    # Initialize process CPU counters once.
+    for proc in psutil.process_iter():
+        try:
+            proc.cpu_percent(interval=None)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+    time.sleep(1)
+
     while True:
-        # calculates number of bytes sent and received as well as current time, and calculates the difference
-        current_net_bytes = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
+        current_net_bytes = (
+            # calculates number of bytes sent and received as well as current time, and calculates the difference
+            psutil.net_io_counters().bytes_sent
+            + psutil.net_io_counters().bytes_recv
+        )
         current_time_now = time.time()
         time_diff = current_time_now - last_net_time
 
@@ -81,7 +95,6 @@ def background_sensor_loop():
             try:
                 raw_cpu = proc.cpu_percent(interval=None)
                 cpu = raw_cpu / total_cores if total_cores else 0.0
-                cpu = proc.cpu_percent(interval=None)
                 ram = proc.memory_percent()
 
                 processes_data.append({
@@ -101,21 +114,25 @@ def background_sensor_loop():
 
 def fetch_data(query: str, params: tuple = (), limit: int = 100):
     """Connects to SQLite, runs a query, and formats the outputs cleanly."""
-    # connects to the database to fetch the telemetry data logs
-    conn = sqlite3.connect('diagnostic.db')
-    # this is telling SQLite to return the data as a tuple with column names attached, converting the database row into Python dicts
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
-    # make sure the most recent data is on the top and a limit to make sure it doesn't load every single row to freeze the server
-    # adding params makes sure that the API builds custom queries, immune from SQL Injections
-    cursor.execute(f"{query} ORDER BY timestamp DESC LIMIT {int(limit)}", params)
-    rows = cursor.fetchall()
-    conn.close()
+    conn = None
+    limit = max(1, min(int(limit), 1000))
+    try:
+        # connects to the database to fetch the telemetry data logs
+        conn = sqlite3.connect('diagnostic.db')
+        # this is telling SQLite to return the data as a tuple with column names attached, converting the database row into Python dicts
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # make sure the most recent data is on the top and a limit to make sure it doesn't load every single row to freeze the server
+        cursor.execute(
+            f"{query} ORDER BY timestamp DESC LIMIT {int(limit)}",
+            params
+        )
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        if conn is not None:
+            conn.close()
 
-    # it turns the rows from Python dictionaries into a JSON object that is easy for JavaScript to read and fetch data from
-    return [dict(row) for row in rows]
-    
 @app.get("/")
 def home():
     return {"message": "Diagnostic API Server is Online"}
@@ -176,14 +193,18 @@ def get_system_specs():
     try: 
         # commanding Windows directly in PowerShell asks the WMI database for your hardware's actual details of CPU
         cpu_cmd = 'powershell -Command "(Get-CimInstance Win32_Processor).Name"'
-        cpu_output = subprocess.check_output(cpu_cmd, shell=True, text=True)
+        cpu_output = subprocess.check_output(
+            cpu_cmd, shell=True, text=True, timeout=5
+        )
         cpu_info = cpu_output.strip()
     except Exception as e:
         cpu_info = platform.processor()
 
     try: 
         gpu_cmd = 'powershell -Command "(Get-CimInstance Win32_VideoController).Name"'
-        gpu_output = subprocess.check_output(gpu_cmd, shell=True, text=True).strip()
+        gpu_output = subprocess.check_output(
+            gpu_cmd, shell=True, text=True, timeout=5
+        ).strip()
         gpu_lines = [line.strip() for line in gpu_output.split('\n') if line.strip()]
         
         # most devices have two GPUs like a integrated one and dedicated one, this searches for the performance GPU instead
@@ -199,8 +220,8 @@ def get_system_specs():
     boot_time = psutil.boot_time()
 
     disk = psutil.disk_usage('/')
+    used_disk_gb = round(disk.used / (1024**3), 1)
     total_disk_gb = round(disk.total / (1024**3), 1)
-    free_disk_gb = round(disk.free / (1024**3), 1)
 
     # cores are the physical silicon on your chip, threads is when each physical core acts like two virtual cores, showing hardware limits
     cores = psutil.cpu_count(logical=False)
@@ -213,7 +234,7 @@ def get_system_specs():
         "cores": f"{cores} Cores, {threads} Threads",
         "ram": f"{used_ram} GB Used / {total_ram} GB Total",
         "boot_time": boot_time,
-        "disk": f"{free_disk_gb} GB Free / {total_disk_gb} GB Total",
+        "disk": f"{used_disk_gb} GB Used / {total_disk_gb} GB Total",
 
     }
 @app.get("/api/live")
@@ -275,8 +296,16 @@ class ErrorAnalysisReport(BaseModel):
 @app.post("/api/analyze-error")
 def analyze_error(request: ErrorAnalysisReport):
     if not os.environ.get("GEMINI_API_KEY"):
-        # this makes sure that the API key lives on the server, if it's missing, the endpoint returns a 500 error to the server
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY environment variable is missing on the server.")
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini analysis is unavailable because the API key is missing."
+        )
+
+    if client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini analysis is temporarily unavailable."
+        )
     
     # this is context injection, definining a markdown structure of a root cause and action plan for the AI to return the data as a report
     prompt = f"""
@@ -309,7 +338,11 @@ def analyze_error(request: ErrorAnalysisReport):
         # when the AI is done thinking, it returns a string and wrap it as a Python dict for JSON to read cleanly
         return {"analysis": response.text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}" )
+        print(f"Gemini API error: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini could not generate the diagnostic report."
+        )
 
 @app.get("/api/health-summary")
 def get_health_summary():
@@ -334,11 +367,11 @@ def get_health_summary():
         
         # count how many secs the CPU was over 80% in the last 24 hours
         cursor.execute("""
-            SELECT COUNT(*) as high_cpu_time
+            SELECT COUNT(*) as high_cpu_samples
             FROM telemetry
             WHERE cpu_percent >= 80.0 AND timestamp >= datetime('now', '-1 day')
         """)
-        high_cpu_time = cursor.fetchone()["high_cpu_time"]
+        high_cpu_samples = cursor.fetchone()["high_cpu_samples"]
 
         # check with system-events table to see if anything crashed today
         cursor.execute("""
@@ -356,6 +389,6 @@ def get_health_summary():
         "peak_cpu": round(stats["peak_cpu"] or 0, 1),
         "avg_ram": round(stats["avg_ram"] or 0, 1),
         "peak_ram": round(stats["peak_ram"] or 0, 1),
-        "high_cpu_seconds": high_cpu_time,
+        "high_cpu_samples": high_cpu_samples,
         "critical_events_24h": recent_errors
     }
